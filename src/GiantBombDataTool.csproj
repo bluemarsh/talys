@@ -3,12 +3,15 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <AssemblyName>giantbomb</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <AssemblyName>giantbomb</AssemblyName>
     <AssemblyTitle>GiantBombDataTool</AssemblyTitle>
-    <Product>GiantBombDataTool</Product>
-    <Copyright>Copyright (c) 2019 Aaron Meyers</Copyright>
+    <AssemblyVersion>0.1.0</AssemblyVersion>
+    <FileVersion>0.1.0</FileVersion>
+    <InformationalVersion>0.1.0 Preview</InformationalVersion>
     <Company>Aaron Meyers</Company>
+    <Copyright>Copyright (c) 2019 Aaron Meyers</Copyright>
+    <Product>GiantBombDataTool</Product>
   </PropertyGroup>
 
   <ItemGroup>
