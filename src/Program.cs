@@ -10,18 +10,25 @@ namespace GiantBombDataTool
     {
         static int Main(string[] args)
         {
+#if DEBUG
+            args = new[] { "clone", "platforms", @"c:\temp\giantbomb" };
+#endif
+
             Trace.Listeners.Add(new ConsoleTraceListener(useErrorStream: true));
 
-            int result = Parser.Default.ParseArguments<CloneCommand, FetchCommand>(args).MapResult(
+            int result = Parser.Default.ParseArguments<CloneCommand, FetchCommand, MergeCommand>(args).MapResult(
                 (CloneCommand c) => c.Execute(),
                 (FetchCommand c) => c.Execute(),
+                (MergeCommand c) => c.Execute(),
                 errors => IsHelpOrVersionRequest(errors) ? 0 : 1);
 
+#if DEBUG
             if (Debugger.IsAttached)
             {
                 Console.Write("Press any key to continue . . . ");
                 Console.Read();
             }
+#endif
 
             return result;
         }
