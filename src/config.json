@@ -2,7 +2,22 @@
   "apiKey": "",
   "resources": {
     "platforms": {
-      "fields": "abbreviation,api_detail_url,company,date_added,date_last_updated,deck,id,image,install_base,name,online_support,original_price,release_date,site_detail_url"
+      "fields": [
+        "abbreviation",
+        "api_detail_url",
+        "company",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "id",
+        "image",
+        "install_base",
+        "name",
+        "online_support",
+        "original_price",
+        "release_date",
+        "site_detail_url"
+      ]
     }
   }
 }

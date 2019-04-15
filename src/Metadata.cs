@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace GiantBombDataTool
 {
-    class Metadata
+    [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+    public sealed class Metadata
     {
-        public ResourceConfig Config { get; set; }
+        public ResourceConfig? Config { get; set; }
         public int NextId { get; set; }
         public DateTime NextTimestamp { get; set; }
     }
