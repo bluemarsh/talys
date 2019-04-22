@@ -23,22 +23,23 @@ namespace GiantBombDataTool
 
         public abstract int Execute();
 
-        protected bool TryParseCommonArgs(
-            out Config config,
-            out IReadOnlyList<string> resourceKeys,
-            out IJsonDataStore store,
-            out IJsonStagingStore stagingStore)
+        protected bool TryParseCommonArgs(out FlowContext flowContext)
         {
             if (Resources.Length == 0) Resources = "*";
             if (TargetPath.Length == 0) TargetPath = ".";
 
             string storePath = Path.GetFullPath(TargetPath);
-            var localStore = new LocalJsonDataStore(storePath);
-            store = localStore;
-            stagingStore = localStore;
+            var store = new LocalJsonTableStore(storePath);
 
-            config = GetConfig();
-            return TryParseResources(Resources, config, out resourceKeys);
+            var config = GetConfig();
+            if (!TryParseResources(Resources, config, out var resourceKeys))
+            {
+                flowContext = null!;
+                return false;
+            }
+
+            flowContext = new FlowContext(store, store, resourceKeys, config);
+            return true;
         }
 
         private Config GetConfig()
@@ -89,12 +90,12 @@ namespace GiantBombDataTool
     {
         public override int Execute()
         {
-            if (!TryParseCommonArgs(out var config, out var resources, out var store, out var stagingStore))
+            if (!TryParseCommonArgs(out var flowContext))
                 return 1;
 
-            Console.WriteLine($"Cloning {Resources} to {store.Location}");
+            Console.WriteLine($"Cloning {Resources} to {flowContext.Store.Location}");
 
-            var flow = new CloneFlow(store, stagingStore, resources, config);
+            var flow = new CloneFlow(flowContext);
             return flow.TryExecute() ? 0 : 1;
         }
     }
@@ -104,12 +105,12 @@ namespace GiantBombDataTool
     {
         public override int Execute()
         {
-            if (!TryParseCommonArgs(out var config, out var resources, out var store, out var stagingStore))
+            if (!TryParseCommonArgs(out var flowContext))
                 return 1;
 
-            Console.WriteLine($"Fetching {Resources} to {store.Location}");
+            Console.WriteLine($"Fetching {Resources} to {flowContext.Store.Location}");
 
-            var flow = new FetchFlow(store, stagingStore, resources, config);
+            var flow = new FetchFlow(flowContext);
             return flow.TryExecute() ? 0 : 1;
         }
     }

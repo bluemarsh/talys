@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace GiantBombDataTool
 {
-    public interface IJsonDataStore
+    public interface ITableStore
     {
         object Location { get; }
 
@@ -15,26 +15,26 @@ namespace GiantBombDataTool
         bool TryGetMetadata(string resource, out Metadata metadata);
     }
 
-    public interface IJsonStagingStore
+    public interface ITableStagingStore
     {
-        void WriteStagedEntities(string resource, IEnumerable<JsonEntity> entities);
+        void WriteStagedEntities(string resource, IEnumerable<TableEntity> entities);
     }
 
-    public sealed class JsonEntity
+    public sealed class TableEntity
     {
-        public JsonEntity(long id, DateTime timestamp, JObject content)
+        public TableEntity(long id, DateTime timestamp, IReadOnlyDictionary<string, object> properties)
         {
             Id = id;
             Timestamp = timestamp;
-            Content = content;
+            Properties = properties;
         }
 
         public long Id { get; }
         public DateTime Timestamp { get; }
-        public JObject Content { get; }
+        public IReadOnlyDictionary<string, object> Properties { get; }
     }
 
-    public sealed class LocalJsonDataStore : IJsonDataStore, IJsonStagingStore
+    public sealed class LocalJsonTableStore : ITableStore, ITableStagingStore
     {
         private static readonly JsonSerializerSettings _metadataSettings = new JsonSerializerSettings
         {
@@ -48,7 +48,7 @@ namespace GiantBombDataTool
 
         private readonly string _storePath;
 
-        public LocalJsonDataStore(string storePath)
+        public LocalJsonTableStore(string storePath)
         {
             _storePath = storePath;
         }
@@ -92,7 +92,7 @@ namespace GiantBombDataTool
             return true;
         }
 
-        public void WriteStagedEntities(string resource, IEnumerable<JsonEntity> entities)
+        public void WriteStagedEntities(string resource, IEnumerable<TableEntity> entities)
         {
             var enumerator = entities.GetEnumerator();
             if (!enumerator.MoveNext())
@@ -106,7 +106,7 @@ namespace GiantBombDataTool
                 do
                 {
                     var entity = enumerator.Current;
-                    writer.WriteLine(JsonConvert.SerializeObject(entity, _contentSettings));
+                    writer.WriteLine(JsonConvert.SerializeObject(entity.Properties, _contentSettings));
                 } while (enumerator.MoveNext());
             }
         }
