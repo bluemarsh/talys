@@ -8,18 +8,28 @@ using Newtonsoft.Json.Linq;
 
 namespace GiantBombDataTool
 {
-    internal sealed class GiantBombApiClient
+    internal sealed class GiantBombTableStore : IReadOnlyTableStore
     {
         private readonly WebClient _webClient;
         private readonly string _apiKey;
         private readonly bool _verbose;
         private DateTime _nextRequest = DateTime.MinValue;
 
-        public GiantBombApiClient(string apiKey, string userAgent, bool verbose = false)
+        public GiantBombTableStore(string apiKey, string userAgent, bool verbose = false)
         {
             _webClient = new InternalWebClient(userAgent);
             _apiKey = apiKey;
             _verbose = verbose;
+        }
+
+        public IEnumerable<TableEntity> GetEntitiesById(long nextId)
+        {
+            var obj = DownloadResourceList(
+                resource,
+                string.Join(",", resourceConfig.Fields),
+                offset: 0,
+                limit: 100,
+                sort: "id:asc");
         }
 
         public JObject DownloadResourceList(

@@ -7,25 +7,28 @@ namespace GiantBombDataTool
     public sealed class FlowContext
     {
         public FlowContext(
-            ITableStore store,
+            IReadOnlyTableStore sourceStore,
+            ITableStore targetStore,
             ITableStagingStore stagingStore,
             IEnumerable<string> resources,
             Config config)
         {
-            Store = store;
+            SourceStore = sourceStore;
+            TargetStore = targetStore;
             StagingStore = stagingStore;
             Resources = resources;
             Config = config;
         }
 
-        public ITableStore Store { get; }
+        public IReadOnlyTableStore SourceStore { get; }
+        public ITableStore TargetStore { get; }
         public ITableStagingStore StagingStore { get; }
         public IEnumerable<string> Resources { get; }
         public Config Config { get; }
 
         public FlowContext WithResources(IEnumerable<string> resources)
         {
-            return new FlowContext(Store, StagingStore, resources, Config);
+            return new FlowContext(SourceStore, TargetStore, StagingStore, resources, Config);
         }
     }
 
@@ -49,7 +52,7 @@ namespace GiantBombDataTool
                     Config = resourceConfig,
                 };
 
-                if (!_context.Store.TryInitialize(resource, metadata))
+                if (!_context.TargetStore.TryInitialize(resource, metadata))
                     return false;
 
                 var fetchFlow = new FetchFlow(_context.WithResources(new[] { resource }));
@@ -67,9 +70,6 @@ namespace GiantBombDataTool
 
         public FetchFlow(FlowContext context)
         {
-            if (context.Config.ApiKey is null)
-                throw new ArgumentException($"Missing {nameof(Config.ApiKey)} on {nameof(context.Config)}");
-
             _context = context;
         }
 
@@ -77,7 +77,7 @@ namespace GiantBombDataTool
         {
             foreach (string resource in _context.Resources)
             {
-                if (!_context.Store.TryGetMetadata(resource, out var metadata))
+                if (!_context.TargetStore.TryGetMetadata(resource, out var metadata))
                     return false;
 
                 if (metadata.NextTimestamp == null)
@@ -104,24 +104,9 @@ namespace GiantBombDataTool
              *  write contents to staging store (resource, array of JsonEntity -- {resource}-{firstId}.json file)
              *  if additional pages then continue
              */
-            var giantBombClient = CreateGiantBombClient();
-            var obj = giantBombClient.DownloadResourceList(
-                resource,
-                string.Join(",", resourceConfig.Fields),
-                offset: 0,
-                limit: 100,
-                sort: "id:asc");
-            _context.StagingStore.WriteStagedEntities(resource, new[] { new TableEntity(nextId, DateTime.UtcNow, obj) });
+            var entities = _context.SourceStore.GetEntitiesById(nextId);
+            _context.StagingStore.WriteStagedEntities(resource, entities);
             return true;
-        }
-
-        private GiantBombApiClient CreateGiantBombClient()
-        {
-            if (_context.Config.ApiKey is null)
-                throw new InvalidOperationException($"Missing {nameof(Config.ApiKey)} on configuration");
-
-            string userAgent = CommandLine.Text.HeadingInfo.Default.ToString();
-            return new GiantBombApiClient(_context.Config.ApiKey, userAgent, _context.Config.Verbose);
         }
     }
 }

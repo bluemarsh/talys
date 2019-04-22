@@ -28,9 +28,6 @@ namespace GiantBombDataTool
             if (Resources.Length == 0) Resources = "*";
             if (TargetPath.Length == 0) TargetPath = ".";
 
-            string storePath = Path.GetFullPath(TargetPath);
-            var store = new LocalJsonTableStore(storePath);
-
             var config = GetConfig();
             if (!TryParseResources(Resources, config, out var resourceKeys))
             {
@@ -38,7 +35,12 @@ namespace GiantBombDataTool
                 return false;
             }
 
-            flowContext = new FlowContext(store, store, resourceKeys, config);
+            var sourceStore = CreateGiantBombStore(config);
+
+            string targetPath = Path.GetFullPath(TargetPath);
+            var targetStore = new LocalJsonTableStore(targetPath);
+
+            flowContext = new FlowContext(sourceStore, targetStore, targetStore, resourceKeys, config);
             return true;
         }
 
@@ -58,6 +60,15 @@ namespace GiantBombDataTool
             config.OverrideWith(argConfig);
 
             return config;
+        }
+
+        private GiantBombTableStore CreateGiantBombStore(Config config)
+        {
+            if (config.ApiKey is null)
+                throw new InvalidOperationException($"Missing {nameof(config.ApiKey)} on configuration");
+
+            string userAgent = CommandLine.Text.HeadingInfo.Default.ToString();
+            return new GiantBombTableStore(config.ApiKey, userAgent, config.Verbose);
         }
 
         private bool TryParseResources(string resourcesArg, Config config, out IReadOnlyList<string> resourceKeys)
@@ -93,7 +104,7 @@ namespace GiantBombDataTool
             if (!TryParseCommonArgs(out var flowContext))
                 return 1;
 
-            Console.WriteLine($"Cloning {Resources} to {flowContext.Store.Location}");
+            Console.WriteLine($"Cloning {Resources} to {flowContext.TargetStore.Location}");
 
             var flow = new CloneFlow(flowContext);
             return flow.TryExecute() ? 0 : 1;
@@ -108,7 +119,7 @@ namespace GiantBombDataTool
             if (!TryParseCommonArgs(out var flowContext))
                 return 1;
 
-            Console.WriteLine($"Fetching {Resources} to {flowContext.Store.Location}");
+            Console.WriteLine($"Fetching {Resources} to {flowContext.TargetStore.Location}");
 
             var flow = new FetchFlow(flowContext);
             return flow.TryExecute() ? 0 : 1;
