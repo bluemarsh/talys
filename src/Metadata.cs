@@ -8,8 +8,13 @@ namespace GiantBombDataTool
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public sealed class Metadata
     {
-        public ResourceConfig? Config { get; set; }
-        public int NextId { get; set; }
-        public DateTime NextTimestamp { get; set; }
+        [JsonProperty(Required = Required.Always)]
+        public ResourceConfig Config { get; set; } = new ResourceConfig();
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public long? NextId { get; set; }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DateTime? NextTimestamp { get; set; }
     }
 }

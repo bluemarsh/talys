@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace GiantBombDataTool
 {
@@ -14,8 +12,8 @@ namespace GiantBombDataTool
 
         internal static string GetManifestResourceString(this Type type, string name)
         {
-            using var reader = new StreamReader(GetManifestResourceStream(type, name));
-            return reader.ReadToEnd();
+            using (var reader = new StreamReader(GetManifestResourceStream(type, name)))
+                return reader.ReadToEnd();
         }
     }
 }

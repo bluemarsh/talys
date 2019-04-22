@@ -9,12 +9,39 @@ namespace GiantBombDataTool
 {
     internal abstract class Command
     {
+        [Value(0, MetaName = "resources", Required = false, Default = "*", HelpText = "Comma-delimited list of resources to clone, or * for all.")]
+        public string Resources { get; set; } = string.Empty;
+
+        [Value(1, MetaName = "target-path", Required = false, Default = ".", HelpText = "Target path for the data store.")]
+        public string TargetPath { get; set; } = string.Empty;
+
         [Option('a', "api-key", HelpText = "API key for querying GiantBomb")]
         public string? ApiKey { get; set; }
 
+        [Option("verbose", HelpText = "Enable verbose tracing output")]
+        public bool Verbose { get; set; }
+
         public abstract int Execute();
 
-        protected Config GetConfig()
+        protected bool TryParseCommonArgs(
+            out Config config,
+            out IReadOnlyList<string> resourceKeys,
+            out IJsonDataStore store,
+            out IJsonStagingStore stagingStore)
+        {
+            if (Resources.Length == 0) Resources = "*";
+            if (TargetPath.Length == 0) TargetPath = ".";
+
+            string storePath = Path.GetFullPath(TargetPath);
+            var localStore = new LocalJsonDataStore(storePath);
+            store = localStore;
+            stagingStore = localStore;
+
+            config = GetConfig();
+            return TryParseResources(Resources, config, out resourceKeys);
+        }
+
+        private Config GetConfig()
         {
             var config = JsonConvert.DeserializeObject<Config>(
                 GetType().GetManifestResourceString("config.json"));
@@ -25,13 +52,14 @@ namespace GiantBombDataTool
             var argConfig = new Config
             {
                 ApiKey = ApiKey,
+                Verbose = Verbose,
             };
             config.OverrideWith(argConfig);
 
             return config;
         }
 
-        protected bool TryParseResources(string resourcesArg, Config config, out IReadOnlyList<string> resourceKeys)
+        private bool TryParseResources(string resourcesArg, Config config, out IReadOnlyList<string> resourceKeys)
         {
             if (resourcesArg == "*")
             {
@@ -59,24 +87,14 @@ namespace GiantBombDataTool
     [Verb("clone", HelpText = "Clone GiantBomb resources to a data store.")]
     internal sealed class CloneCommand : Command
     {
-        [Value(0, MetaName = "resources", Required = true, HelpText = "Comma-delimited list of resources to clone, or * for all.")]
-        public string Resources { get; set; } = string.Empty;
-
-        [Value(1, MetaName = "target-path", Required = true, HelpText = "Target path for the data store.")]
-        public string TargetPath { get; set; } = string.Empty;
-
         public override int Execute()
         {
-            string storePath = Path.GetFullPath(TargetPath);
-
-            var config = GetConfig();
-            if (!TryParseResources(Resources, config, out var resources))
+            if (!TryParseCommonArgs(out var config, out var resources, out var store, out var stagingStore))
                 return 1;
 
-            Console.WriteLine($"Cloning {Resources} to {storePath}");
+            Console.WriteLine($"Cloning {Resources} to {store.Location}");
 
-            var storeFactory = new LocalJsonDataStoreFactory(storePath);
-            var flow = new CloneFlow(storeFactory, resources, config);
+            var flow = new CloneFlow(store, stagingStore, resources, config);
             return flow.TryExecute() ? 0 : 1;
         }
     }
@@ -86,8 +104,13 @@ namespace GiantBombDataTool
     {
         public override int Execute()
         {
-            Console.WriteLine("Execute Fetch");
-            return 0;
+            if (!TryParseCommonArgs(out var config, out var resources, out var store, out var stagingStore))
+                return 1;
+
+            Console.WriteLine($"Fetching {Resources} to {store.Location}");
+
+            var flow = new FetchFlow(store, stagingStore, resources, config);
+            return flow.TryExecute() ? 0 : 1;
         }
     }
 

@@ -71,8 +71,9 @@ namespace GiantBombDataTool
             string? sort,
             DateTime? dateLastUpdated)
         {
-            string s = $"http://www.giantbomb.com/api/{resource}/?api_key={_apiKey}&format=json";
-            s += "&sort=" + sort != null ? sort : "date_last_updated:desc";
+            sort ??= "date_last_updated:desc";
+            string s = $"http://www.giantbomb.com/api/{resource}/?api_key={_apiKey}&format=json&sort={sort}";
+
             if (fields != null)
                 s += $"&field_list={fields}";
             if (offset > 0)

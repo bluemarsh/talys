@@ -11,6 +11,9 @@ namespace GiantBombDataTool
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string? ApiKey { get; set; }
 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public bool Verbose { get; set; }
+
         protected void OverrideWith(BaseConfig other)
         {
             if (!string.IsNullOrWhiteSpace(other.ApiKey))
@@ -20,7 +23,9 @@ namespace GiantBombDataTool
 
     public class Config : BaseConfig
     {
-        public Dictionary<string, ResourceConfig> Resources { get; set; } = new Dictionary<string, ResourceConfig>();
+        // TODO: StoreApiKey option (writes ApiKey to metadata)
+
+        public Dictionary<string, ResourceConfig> Resources { get; } = new Dictionary<string, ResourceConfig>();
 
         public void OverrideWith(Config other)
         {
@@ -30,6 +35,7 @@ namespace GiantBombDataTool
 
     public class ResourceConfig : BaseConfig
     {
-        public string[]? Fields { get; set; }
+        [JsonProperty(Required = Required.Always)]
+        public IReadOnlyList<string> Fields { get; set; } = Array.Empty<string>();
     }
 }
