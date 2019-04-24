@@ -1,6 +1,6 @@
 {
   "apiKey": "",
-  "resources": {
+  "tables": {
     "platforms": {
       "fields": [
         "abbreviation",

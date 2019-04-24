@@ -34,16 +34,35 @@ namespace GiantBombDataTool
 
     public sealed class CloneFlow
     {
-        private readonly FlowContext _context;
+        private readonly IReadOnlyTableStore _sourceStore;
+        private readonly ITableStore _targetStore;
+        private readonly ITableMetadataStore _metadataStore;
+        private readonly ITableStagingStore _stagingStore;
+        private readonly IEnumerable<string> _tables;
+        private readonly StoreConfig _sourceConfig;
+        private readonly StoreConfig _targetConfig;
 
-        public CloneFlow(FlowContext context)
+        public CloneFlow(
+            IReadOnlyTableStore sourceStore,
+            ITableStore targetStore,
+            ITableMetadataStore metadataStore,
+            ITableStagingStore stagingStore,
+            IEnumerable<string> tables,
+            StoreConfig sourceConfig,
+            StoreConfig targetConfig)
         {
-            _context = context;
+            _sourceStore = sourceStore;
+            _targetStore = targetStore;
+            _metadataStore = metadataStore;
+            _stagingStore = stagingStore;
+            _tables = tables;
+            _sourceConfig = sourceConfig;
+            _targetConfig = targetConfig;
         }
 
         public bool TryExecute()
         {
-            foreach (string resource in _context.Resources)
+            foreach (string table in _tables)
             {
                 var resourceConfig = _context.Config.Resources[resource];
 

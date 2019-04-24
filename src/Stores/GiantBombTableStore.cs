@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace GiantBombDataTool
@@ -32,7 +33,7 @@ namespace GiantBombDataTool
                 sort: "id:asc");
         }
 
-        public JObject DownloadResourceList(
+        private JObject DownloadResourceList(
             string resource,
             string fields,
             long offset,
@@ -44,7 +45,7 @@ namespace GiantBombDataTool
             return DownloadCore(uri);
         }
 
-        public JObject DownloadResourceDetail(string url, string fields)
+        private JObject DownloadResourceDetail(string url, string fields)
         {
             var uri = BuildDetailUri(url, fields);
             return DownloadCore(uri);
@@ -55,7 +56,7 @@ namespace GiantBombDataTool
             EnforceRateLimit();
 
             Trace.WriteLineIf(_verbose, string.Empty);
-            Trace.WriteLineIf(_verbose, uri, typeof(GiantBombApiClient).Name);
+            Trace.WriteLineIf(_verbose, uri, typeof(GiantBombTableStore).Name);
 
             var json = _webClient.DownloadString(uri);
             var obj = JObject.Parse(json);
@@ -101,6 +102,14 @@ namespace GiantBombDataTool
             if (fields != null)
                 s += $"&field_list={fields}";
             return new Uri(s);
+        }
+
+        private sealed class GiantBombConfig
+        {
+            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+            public string? ApiKey { get; set; }
+
+            public IReadOnlyList<string>? Fields { get; set; }
         }
 
         private class InternalWebClient : WebClient

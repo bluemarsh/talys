@@ -16,7 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="config.json" />
+    <EmbeddedResource Include="Stores\giantbombconfig.json" />
   </ItemGroup>
 
   <ItemGroup>
