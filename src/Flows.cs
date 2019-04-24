@@ -7,74 +7,52 @@ namespace GiantBombDataTool
     public sealed class FlowContext
     {
         public FlowContext(
-            IReadOnlyTableStore sourceStore,
-            ITableStore targetStore,
-            ITableStagingStore stagingStore,
-            IEnumerable<string> resources,
+            LocalJsonTableStore localStore,
+            GiantBombTableStore remoteStore,
+            IEnumerable<string> tables,
             Config config)
         {
-            SourceStore = sourceStore;
-            TargetStore = targetStore;
-            StagingStore = stagingStore;
-            Resources = resources;
+            LocalStore = localStore;
+            RemoteStore = remoteStore;
+            Tables = tables;
             Config = config;
         }
 
-        public IReadOnlyTableStore SourceStore { get; }
-        public ITableStore TargetStore { get; }
-        public ITableStagingStore StagingStore { get; }
-        public IEnumerable<string> Resources { get; }
-        public Config Config { get; }
+        public LocalJsonTableStore LocalStore { get; }
+        public GiantBombTableStore RemoteStore { get; }
+        public IEnumerable<string> Tables { get; }
+        public StoreConfig Config { get; }
 
-        public FlowContext WithResources(IEnumerable<string> resources)
+        public FlowContext WithTables(IEnumerable<string> tables)
         {
-            return new FlowContext(SourceStore, TargetStore, StagingStore, resources, Config);
+            return new FlowContext(LocalStore, RemoteStore, tables, Config);
         }
     }
 
     public sealed class CloneFlow
     {
-        private readonly IReadOnlyTableStore _sourceStore;
-        private readonly ITableStore _targetStore;
-        private readonly ITableMetadataStore _metadataStore;
-        private readonly ITableStagingStore _stagingStore;
-        private readonly IEnumerable<string> _tables;
-        private readonly StoreConfig _sourceConfig;
-        private readonly StoreConfig _targetConfig;
+        private readonly FlowContext _context;
 
-        public CloneFlow(
-            IReadOnlyTableStore sourceStore,
-            ITableStore targetStore,
-            ITableMetadataStore metadataStore,
-            ITableStagingStore stagingStore,
-            IEnumerable<string> tables,
-            StoreConfig sourceConfig,
-            StoreConfig targetConfig)
+        public CloneFlow(FlowContext context)
         {
-            _sourceStore = sourceStore;
-            _targetStore = targetStore;
-            _metadataStore = metadataStore;
-            _stagingStore = stagingStore;
-            _tables = tables;
-            _sourceConfig = sourceConfig;
-            _targetConfig = targetConfig;
+            _context = context;
         }
 
         public bool TryExecute()
         {
-            foreach (string table in _tables)
+            foreach (string table in _context.Tables)
             {
-                var resourceConfig = _context.Config.Resources[resource];
+                var tableConfig = _context.Config.Tables[table];
 
                 var metadata = new Metadata
                 {
-                    Config = resourceConfig,
+                    Config = tableConfig,
                 };
 
-                if (!_context.TargetStore.TryInitialize(resource, metadata))
+                if (!_context.LocalStore.TryInitialize(table, metadata))
                     return false;
 
-                var fetchFlow = new FetchFlow(_context.WithResources(new[] { resource }));
+                var fetchFlow = new FetchFlow(_context.WithTables(new[] { table }));
                 if (!fetchFlow.TryExecute())
                     return false;
             }
@@ -94,9 +72,9 @@ namespace GiantBombDataTool
 
         public bool TryExecute()
         {
-            foreach (string resource in _context.Resources)
+            foreach (string table in _context.Tables)
             {
-                if (!_context.TargetStore.TryGetMetadata(resource, out var metadata))
+                if (!_context.LocalStore.TryGetMetadata(table, out var metadata))
                     return false;
 
                 if (metadata.NextTimestamp == null)
@@ -107,7 +85,7 @@ namespace GiantBombDataTool
 
                 if (metadata.NextId != null)
                 {
-                    if (!TryFetchResourcesById(resource, metadata.Config, metadata.NextId.Value))
+                    if (!TryFetchEntitiesById(table, metadata.Config, metadata.NextId.Value))
                         return false;
                 }
             }
@@ -115,7 +93,7 @@ namespace GiantBombDataTool
             return true;
         }
 
-        private bool TryFetchResourcesById(string resource, ResourceConfig resourceConfig, long nextId)
+        private bool TryFetchEntitiesById(string resource, Config config, long nextId)
         {
             /*
              * Loop:
@@ -123,8 +101,8 @@ namespace GiantBombDataTool
              *  write contents to staging store (resource, array of JsonEntity -- {resource}-{firstId}.json file)
              *  if additional pages then continue
              */
-            var entities = _context.SourceStore.GetEntitiesById(nextId);
-            _context.StagingStore.WriteStagedEntities(resource, entities);
+            var entities = _context.RemoteStore.GetEntitiesById(nextId);
+            _context.LocalStore.WriteStagedEntities(resource, entities);
             return true;
         }
     }

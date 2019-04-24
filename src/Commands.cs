@@ -9,9 +9,6 @@ namespace GiantBombDataTool
 {
     internal abstract class Command
     {
-        [Option('g', "staging", Required = false, HelpText = "Staging store for fetched data.")]
-        public string Staging { get; set; } = string.Empty;
-
         [Option('t', "tables", Required = false, Default = "*", HelpText = "Comma-delimited list of tables to clone, or * for all.")]
         public string Tables { get; set; } = string.Empty;
 

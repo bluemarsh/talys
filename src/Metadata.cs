@@ -18,15 +18,8 @@ namespace GiantBombDataTool
 
     public sealed class Metadata : MetadataBase
     {
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public JObject? SourceConfig { get; set; }
-
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public JObject? TargetConfig { get; set; }
-    }
-
-    public class StoreMetadata
-    {
+        [JsonProperty(Required = Required.Always)]
+        public Config Config { get; set; }
     }
 
     public sealed class StagingMetadata : MetadataBase

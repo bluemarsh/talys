@@ -11,9 +11,6 @@ namespace GiantBombDataTool
     {
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public bool? Verbose { get; set; }
-
-        [JsonExtensionData]
-        public Dictionary<string, JToken> Properties { get; } = new Dictionary<string, JToken>();
     }
 
     public class StoreConfig : Config

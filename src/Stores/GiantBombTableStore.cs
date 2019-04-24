@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace GiantBombDataTool
 {
-    internal sealed class GiantBombTableStore : IReadOnlyTableStore
+    public sealed class GiantBombTableStore : IReadOnlyTableStore
     {
         private readonly WebClient _webClient;
         private readonly string _apiKey;
