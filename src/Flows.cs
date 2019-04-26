@@ -113,9 +113,14 @@ namespace GiantBombDataTool
 
         private bool TryFetchEntities(string table, TableConfig config, StagingMetadata metadata)
         {
-            const int chunkSize = 500;
+            const int chunkSize = 50; // 0;
 
             // TODO: loop until enumerator is exhausted
+
+            string lastUpdateText = metadata.LastTimestamp != null ?
+                metadata.LastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
+                "forever";
+            Console.WriteLine($"Retrieving {table} updated since {lastUpdateText}");
 
             var entities = _context.RemoteStore.GetEntitiesByTimestamp(
                 table,
@@ -131,6 +136,12 @@ namespace GiantBombDataTool
                 metadata.LastId = enumerator.LastId;
                 metadata.Merge.Add(chunk);
                 _context.LocalStore.SaveStagingMetadata(table, metadata);
+
+                Console.WriteLine($"Wrote {chunk} to staging");
+            }
+            else
+            {
+                Console.WriteLine("Already up to date.");
             }
             return true;
         }
