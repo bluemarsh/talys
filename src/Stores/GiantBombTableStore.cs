@@ -23,14 +23,31 @@ namespace GiantBombDataTool
             _verbose = verbose;
         }
 
-        public IEnumerable<TableEntity> GetEntitiesById(long nextId)
+        public IEnumerable<TableEntity> GetEntitiesById(string table, long nextId, TableConfig config)
         {
-            var obj = DownloadResourceList(
-                resource,
-                string.Join(",", resourceConfig.Fields),
-                offset: 0,
-                limit: 100,
-                sort: "id:asc");
+            // TODO: replace nextId with nextOffset
+            long nextOffset = 0;
+            bool finished = false;
+
+            while (!finished)
+            {
+                var obj = DownloadResourceList(
+                    table,
+                    string.Join(",", config.Fields),
+                    offset: nextOffset,
+                    limit: 100,
+                    sort: "id:asc");
+
+                nextOffset = obj["offset"].Value<long>() + obj["number_of_page_results"].Value<long>();
+                finished = obj["number_of_page_results"].Value<long>() < obj["limit"].Value<long>();
+
+                foreach (var item in obj["results"])
+                {
+                    long id = item["id"].Value<long>();
+                    var timestamp = DateTime.Parse(item["date_last_updated"].Value<string>().Replace(' ', 'T') + 'Z');
+                    yield return new TableEntity(id, timestamp, (JObject)item);
+                }
+            }
         }
 
         private JObject DownloadResourceList(
@@ -69,6 +86,7 @@ namespace GiantBombDataTool
 
         private void EnforceRateLimit()
         {
+            // TODO: GiantBomb has new rate limits (200 requests per resource per hour), will need to account for this
             if (DateTime.UtcNow < _nextRequest)
                 Thread.Sleep(_nextRequest - DateTime.UtcNow);
             _nextRequest = DateTime.UtcNow + TimeSpan.FromMilliseconds(1001);
@@ -102,14 +120,6 @@ namespace GiantBombDataTool
             if (fields != null)
                 s += $"&field_list={fields}";
             return new Uri(s);
-        }
-
-        private sealed class GiantBombConfig
-        {
-            [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
-            public string? ApiKey { get; set; }
-
-            public IReadOnlyList<string>? Fields { get; set; }
         }
 
         private class InternalWebClient : WebClient

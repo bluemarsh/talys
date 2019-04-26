@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace GiantBombDataTool
 {
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public abstract class MetadataBase
+    public abstract class CommonMetadata
     {
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public long? NextId { get; set; }
@@ -16,13 +15,13 @@ namespace GiantBombDataTool
         public DateTime? NextTimestamp { get; set; }
     }
 
-    public sealed class Metadata : MetadataBase
+    public sealed class Metadata : CommonMetadata
     {
         [JsonProperty(Required = Required.Always)]
-        public Config Config { get; set; }
+        public TableConfig Config { get; set; } = new TableConfig();
     }
 
-    public sealed class StagingMetadata : MetadataBase
+    public sealed class StagingMetadata : CommonMetadata
     {
         public List<string> Merge { get; } = new List<string>();
     }

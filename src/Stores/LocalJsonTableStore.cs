@@ -27,15 +27,15 @@ namespace GiantBombDataTool
 
         public object Location => _storePath;
 
-        public bool TryInitialize(string resource, Metadata metadata)
+        public bool TryInitialize(string table, Metadata metadata)
         {
             Directory.CreateDirectory(_storePath);
 
-            string metadataPath = GetMetadataPath(resource);
+            string metadataPath = GetMetadataPath(table);
 
             if (File.Exists(metadataPath) || Directory.Exists(metadataPath))
             {
-                Console.WriteLine($"Data store resource already initialized: {metadataPath}");
+                Console.WriteLine($"Table already initialized: {metadataPath}");
                 return false;
             }
 
@@ -43,17 +43,17 @@ namespace GiantBombDataTool
                 metadataPath,
                 JsonConvert.SerializeObject(metadata, _metadataSettings));
 
-            Console.WriteLine($"Initialized data store resource: {metadataPath}");
+            Console.WriteLine($"Initialized table: {metadataPath}");
 
             return true;
         }
 
-        public bool TryGetMetadata(string resource, out Metadata metadata)
+        public bool TryLoadMetadata(string table, out Metadata metadata)
         {
-            string path = GetMetadataPath(resource);
+            string path = GetMetadataPath(table);
             if (!File.Exists(path))
             {
-                Console.WriteLine($"Data store resource not found: {path}");
+                Console.WriteLine($"Table metadata not found: {path}");
                 metadata = null!;
                 return false;
             }
@@ -64,26 +64,46 @@ namespace GiantBombDataTool
             return true;
         }
 
-        public void WriteStagedEntities(string resource, IEnumerable<TableEntity> entities)
+        public IEnumerable<string> GetTables()
+        {
+            foreach (var metadataFileName in Directory.EnumerateFiles(_storePath, "*.metadata.json"))
+                yield return Path.GetFileName(metadataFileName).Split('.')[0];
+        }
+
+        public bool TryLoadStagingMetadata(string table, out StagingMetadata metadata)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SaveStagingMetadata(string table, StagingMetadata metadata)
+        {
+            string path = GetStagingMetadataPath(table);
+            File.WriteAllText(path, JsonConvert.SerializeObject(metadata, _metadataSettings));
+        }
+
+        public string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities)
         {
             var enumerator = entities.GetEnumerator();
             if (!enumerator.MoveNext())
-                return;
+                return null;
 
             long firstId = enumerator.Current.Id;
-            string path = GetResourceStagingPath(resource, firstId);
+            string path = GetTableStagingPath(table, firstId);
 
-            using (var writer = new StreamWriter(path, append: true, Encoding.UTF8))
+            using (var writer = new StreamWriter(path, append: false, Encoding.UTF8))
             {
                 do
                 {
                     var entity = enumerator.Current;
-                    writer.WriteLine(JsonConvert.SerializeObject(entity.Properties, _contentSettings));
+                    writer.WriteLine(JsonConvert.SerializeObject(entity.Content, _contentSettings));
                 } while (enumerator.MoveNext());
             }
+
+            return Path.GetFileName(path);
         }
 
-        private string GetMetadataPath(string resource) => Path.Combine(_storePath, $"{resource}.metadata.json");
-        private string GetResourceStagingPath(string resource, long id) => Path.Combine(_storePath, $"{resource}.jsonl");
+        private string GetMetadataPath(string table) => Path.Combine(_storePath, $"{table}.metadata.json");
+        private string GetStagingMetadataPath(string table) => Path.Combine(_storePath, $"{table}.staging.json");
+        private string GetTableStagingPath(string table, long id) => Path.Combine(_storePath, $"{table}.{id}.jsonl");
     }
 }

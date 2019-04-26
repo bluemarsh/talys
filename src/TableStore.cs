@@ -6,9 +6,8 @@ namespace GiantBombDataTool
 {
     public interface IReadOnlyTableStore
     {
-        StoreMetadata CreateMetadata(StoreConfig config);
-        //void SetConfiguration(JObject configuration);
-        IEnumerable<TableEntity> GetEntitiesById(long nextId);
+        //StoreMetadata CreateMetadata(StoreConfig config);
+        IEnumerable<TableEntity> GetEntitiesById(string table, long nextId, TableConfig config);
     }
 
     public interface ITableStore // TODO: derives IReadOnlyTableStore
@@ -19,13 +18,15 @@ namespace GiantBombDataTool
     public interface ITableMetadataStore
     {
         bool TryInitialize(string table, Metadata metadata);
-        bool TryGetMetadata(string table, out Metadata metadata);
+        bool TryLoadMetadata(string table, out Metadata metadata);
+        IEnumerable<string> GetTables();
     }
 
     public interface ITableStagingStore
     {
-        bool TryGetStagingMetadata(string table, out StagingMetadata metadata);
-        void WriteStagedEntities(string table, IEnumerable<TableEntity> entities);
+        bool TryLoadStagingMetadata(string table, out StagingMetadata metadata);
+        void SaveStagingMetadata(string table, StagingMetadata metadata);
+        string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities);
     }
 
     public sealed class TableEntity

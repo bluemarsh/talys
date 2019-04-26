@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace GiantBombDataTool
 {
@@ -9,7 +11,7 @@ namespace GiantBombDataTool
         public FlowContext(
             LocalJsonTableStore localStore,
             GiantBombTableStore remoteStore,
-            IEnumerable<string> tables,
+            IReadOnlyList<string> tables,
             Config config)
         {
             LocalStore = localStore;
@@ -20,10 +22,10 @@ namespace GiantBombDataTool
 
         public LocalJsonTableStore LocalStore { get; }
         public GiantBombTableStore RemoteStore { get; }
-        public IEnumerable<string> Tables { get; }
-        public StoreConfig Config { get; }
+        public IReadOnlyList<string> Tables { get; }
+        public Config Config { get; }
 
-        public FlowContext WithTables(IEnumerable<string> tables)
+        public FlowContext WithTables(IReadOnlyList<string> tables)
         {
             return new FlowContext(LocalStore, RemoteStore, tables, Config);
         }
@@ -40,9 +42,19 @@ namespace GiantBombDataTool
 
         public bool TryExecute()
         {
-            foreach (string table in _context.Tables)
+            IEnumerable<string> tables;
+            if (_context.Tables.Count > 0)
+                tables = _context.Tables;
+            else
+                tables = _context.Config.Tables.Keys;
+
+            foreach (string table in tables)
             {
-                var tableConfig = _context.Config.Tables[table];
+                if (!_context.Config.Tables.TryGetValue(table, out var tableConfig))
+                {
+                    Console.WriteLine($"Unknown table: {table}");
+                    return false;
+                }
 
                 var metadata = new Metadata
                 {
@@ -72,9 +84,17 @@ namespace GiantBombDataTool
 
         public bool TryExecute()
         {
-            foreach (string table in _context.Tables)
+            IEnumerable<string> tables;
+            if (_context.Tables.Count > 0)
+                tables = _context.Tables;
+            else
+                tables = _context.LocalStore.GetTables();
+
+            foreach (string table in tables)
             {
-                if (!_context.LocalStore.TryGetMetadata(table, out var metadata))
+                // TODO: check staging metadata first
+
+                if (!_context.LocalStore.TryLoadMetadata(table, out var metadata))
                     return false;
 
                 if (metadata.NextTimestamp == null)
@@ -93,17 +113,56 @@ namespace GiantBombDataTool
             return true;
         }
 
-        private bool TryFetchEntitiesById(string resource, Config config, long nextId)
+        private bool TryFetchEntitiesById(string table, TableConfig config, long nextId)
         {
+            const int chunkSize = 1000;
+
             /*
              * Loop:
              *  download resource list from GiantBomb (returns array of JsonEntity and indicator for additional pages)
              *  write contents to staging store (resource, array of JsonEntity -- {resource}-{firstId}.json file)
              *  if additional pages then continue
              */
-            var entities = _context.RemoteStore.GetEntitiesById(nextId);
-            _context.LocalStore.WriteStagedEntities(resource, entities);
+            var entities = _context.RemoteStore.GetEntitiesById(table, nextId, config);
+            var enumerator = new EntityEnumerator(entities);
+            var chunk = _context.LocalStore.WriteStagedEntities(table, enumerator.Take(chunkSize));
+            if (chunk != null)
+            {
+                nextId = enumerator.LastId + 1;
+                var metadata = new StagingMetadata
+                {
+                    NextId = nextId,
+                    Merge = { chunk },
+                };
+                _context.LocalStore.SaveStagingMetadata(table, metadata);
+            }
             return true;
+        }
+
+        private sealed class EntityEnumerator : IEnumerable<TableEntity>
+        {
+            private readonly IEnumerable<TableEntity> _entities;
+
+            internal EntityEnumerator(IEnumerable<TableEntity> entities)
+            {
+                _entities = entities;
+            }
+
+            internal long LastId { get; private set; }
+
+            public IEnumerator<TableEntity> GetEnumerator()
+            {
+                foreach (var entity in _entities)
+                {
+                    LastId = entity.Id;
+                    yield return entity;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
         }
     }
 }
