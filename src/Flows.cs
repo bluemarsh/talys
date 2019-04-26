@@ -92,48 +92,44 @@ namespace GiantBombDataTool
 
             foreach (string table in tables)
             {
-                // TODO: check staging metadata first
-
-                if (!_context.LocalStore.TryLoadMetadata(table, out var metadata))
+                if (!_context.LocalStore.TryLoadMetadata(table, out var tableMetadata))
                     return false;
 
-                if (metadata.NextTimestamp == null)
+                if (!_context.LocalStore.TryLoadStagingMetadata(table, out var stagingMetadata))
                 {
-                    metadata.NextId ??= 0;
-                    metadata.NextTimestamp = DateTime.UtcNow;
+                    stagingMetadata = new StagingMetadata
+                    {
+                        LastTimestamp = tableMetadata.LastTimestamp,
+                        LastId = tableMetadata.LastId,
+                    };
                 }
 
-                if (metadata.NextId != null)
-                {
-                    if (!TryFetchEntitiesById(table, metadata.Config, metadata.NextId.Value))
-                        return false;
-                }
+                if (!TryFetchEntities(table, tableMetadata.Config, stagingMetadata))
+                    return false;
             }
 
             return true;
         }
 
-        private bool TryFetchEntitiesById(string table, TableConfig config, long nextId)
+        private bool TryFetchEntities(string table, TableConfig config, StagingMetadata metadata)
         {
-            const int chunkSize = 1000;
+            const int chunkSize = 500;
 
-            /*
-             * Loop:
-             *  download resource list from GiantBomb (returns array of JsonEntity and indicator for additional pages)
-             *  write contents to staging store (resource, array of JsonEntity -- {resource}-{firstId}.json file)
-             *  if additional pages then continue
-             */
-            var entities = _context.RemoteStore.GetEntitiesById(table, nextId, config);
+            // TODO: loop until enumerator is exhausted
+
+            var entities = _context.RemoteStore.GetEntitiesByTimestamp(
+                table,
+                config,
+                metadata.LastTimestamp,
+                metadata.LastId);
+
             var enumerator = new EntityEnumerator(entities);
             var chunk = _context.LocalStore.WriteStagedEntities(table, enumerator.Take(chunkSize));
             if (chunk != null)
             {
-                nextId = enumerator.LastId + 1;
-                var metadata = new StagingMetadata
-                {
-                    NextId = nextId,
-                    Merge = { chunk },
-                };
+                metadata.LastTimestamp = enumerator.LastTimestamp;
+                metadata.LastId = enumerator.LastId;
+                metadata.Merge.Add(chunk);
                 _context.LocalStore.SaveStagingMetadata(table, metadata);
             }
             return true;
@@ -141,6 +137,7 @@ namespace GiantBombDataTool
 
         private sealed class EntityEnumerator : IEnumerable<TableEntity>
         {
+            // TODO: keep IEnumerator instead of IEnumerable so we enumerate only once
             private readonly IEnumerable<TableEntity> _entities;
 
             internal EntityEnumerator(IEnumerable<TableEntity> entities)
@@ -149,12 +146,14 @@ namespace GiantBombDataTool
             }
 
             internal long LastId { get; private set; }
+            internal DateTime LastTimestamp { get; private set; }
 
             public IEnumerator<TableEntity> GetEnumerator()
             {
                 foreach (var entity in _entities)
                 {
                     LastId = entity.Id;
+                    LastTimestamp = entity.Timestamp;
                     yield return entity;
                 }
             }

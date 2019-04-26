@@ -72,7 +72,17 @@ namespace GiantBombDataTool
 
         public bool TryLoadStagingMetadata(string table, out StagingMetadata metadata)
         {
-            throw new NotImplementedException();
+            string path = GetStagingMetadataPath(table);
+            if (!File.Exists(path))
+            {
+                metadata = null!;
+                return false;
+            }
+
+            metadata = JsonConvert.DeserializeObject<StagingMetadata>(
+                File.ReadAllText(path),
+                _metadataSettings);
+            return true;
         }
 
         public void SaveStagingMetadata(string table, StagingMetadata metadata)
@@ -87,8 +97,8 @@ namespace GiantBombDataTool
             if (!enumerator.MoveNext())
                 return null;
 
-            long firstId = enumerator.Current.Id;
-            string path = GetTableStagingPath(table, firstId);
+            var timestamp = enumerator.Current.Timestamp;
+            string path = GetTableStagingPath(table, timestamp);
 
             using (var writer = new StreamWriter(path, append: false, Encoding.UTF8))
             {
@@ -104,6 +114,7 @@ namespace GiantBombDataTool
 
         private string GetMetadataPath(string table) => Path.Combine(_storePath, $"{table}.metadata.json");
         private string GetStagingMetadataPath(string table) => Path.Combine(_storePath, $"{table}.staging.json");
-        private string GetTableStagingPath(string table, long id) => Path.Combine(_storePath, $"{table}.{id}.jsonl");
+        private string GetTableStagingPath(string table, DateTime timestamp)
+            => Path.Combine(_storePath, $"{table}.{timestamp:yyyyMMddHHmmss}.jsonl");
     }
 }

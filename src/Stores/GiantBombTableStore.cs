@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
-using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace GiantBombDataTool
@@ -23,10 +22,12 @@ namespace GiantBombDataTool
             _verbose = verbose;
         }
 
-        public IEnumerable<TableEntity> GetEntitiesById(string table, long nextId, TableConfig config)
+        public IEnumerable<TableEntity> GetEntitiesByTimestamp(
+            string table,
+            TableConfig config,
+            DateTime? lastTimestamp,
+            long? lastId)
         {
-            // TODO: replace nextId with nextOffset
-            long nextOffset = 0;
             bool finished = false;
 
             while (!finished)
@@ -34,17 +35,24 @@ namespace GiantBombDataTool
                 var obj = DownloadResourceList(
                     table,
                     string.Join(",", config.Fields),
-                    offset: nextOffset,
-                    limit: 100,
-                    sort: "id:asc");
+                    sort: "date_last_updated:asc",
+                    dateLastUpdated: lastTimestamp);
 
-                nextOffset = obj["offset"].Value<long>() + obj["number_of_page_results"].Value<long>();
-                finished = obj["number_of_page_results"].Value<long>() < obj["limit"].Value<long>();
+                finished = obj["number_of_page_results"].Value<long>() == obj["number_of_total_results"].Value<long>();
 
                 foreach (var item in obj["results"])
                 {
                     long id = item["id"].Value<long>();
-                    var timestamp = DateTime.Parse(item["date_last_updated"].Value<string>().Replace(' ', 'T') + 'Z');
+                    var timestamp = DateTime.Parse(
+                        item["date_last_updated"].Value<string>().Replace(' ', 'T') + 'Z',
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AdjustToUniversal);
+
+                    if (id == lastId && timestamp == lastTimestamp)
+                        continue; // don't add the last item again
+
+                    lastId = id;
+                    lastTimestamp = timestamp;
                     yield return new TableEntity(id, timestamp, (JObject)item);
                 }
             }
@@ -53,8 +61,8 @@ namespace GiantBombDataTool
         private JObject DownloadResourceList(
             string resource,
             string fields,
-            long offset,
-            long? limit,
+            long offset = 0,
+            long? limit = null,
             string? sort = null,
             DateTime? dateLastUpdated = null)
         {
