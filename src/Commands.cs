@@ -15,6 +15,9 @@ namespace GiantBombDataTool
         [Option('a', "api-key", HelpText = "API key for GiantBomb.")]
         public string? ApiKey { get; set; }
 
+        [Option('c', "chunk-size", HelpText = "Chunk size for staging files.")]
+        public int? ChunkSize { get; set; }
+
         [Option("verbose", HelpText = "Enable verbose tracing output")]
         public bool Verbose { get; set; }
 
@@ -43,22 +46,25 @@ namespace GiantBombDataTool
             var config = JsonConvert.DeserializeObject<Config>(
                 GetType().GetManifestResourceString("config.json"));
 
-            if (ApiKey != null)
+            if (!string.IsNullOrEmpty(ApiKey))
                 config.ApiKey = ApiKey;
+
+            if (ChunkSize != null)
+                config.ChunkSize = ChunkSize;
 
             if (Verbose)
                 config.Verbose = true;
+
+            foreach (var tableConfig in config.Tables.Values)
+                tableConfig.OverrideWith(config);
 
             return config;
         }
 
         private GiantBombTableStore CreateGiantBombStore(Config config)
         {
-            if (config.ApiKey is null)
-                throw new InvalidOperationException($"Missing {nameof(config.ApiKey)} on configuration");
-
             string userAgent = CommandLine.Text.HeadingInfo.Default.ToString();
-            return new GiantBombTableStore(config.ApiKey, userAgent, config.Verbose ?? false);
+            return new GiantBombTableStore(userAgent, config.ApiKey, config.Verbose ?? false);
         }
     }
 

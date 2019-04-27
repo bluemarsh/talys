@@ -11,11 +11,11 @@ namespace GiantBombDataTool
     public sealed class GiantBombTableStore : IReadOnlyTableStore
     {
         private readonly WebClient _webClient;
-        private readonly string _apiKey;
         private readonly bool _verbose;
+        private string? _apiKey;
         private DateTime _nextRequest = DateTime.MinValue;
 
-        public GiantBombTableStore(string apiKey, string userAgent, bool verbose = false)
+        public GiantBombTableStore(string userAgent, string? apiKey = null, bool verbose = false)
         {
             _webClient = new InternalWebClient(userAgent);
             _apiKey = apiKey;
@@ -28,6 +28,9 @@ namespace GiantBombDataTool
             DateTime? lastTimestamp,
             long? lastId)
         {
+            if (string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(config.ApiKey))
+                _apiKey = config.ApiKey;
+
             bool finished = false;
 
             while (!finished)

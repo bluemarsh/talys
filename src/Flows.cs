@@ -113,9 +113,7 @@ namespace GiantBombDataTool
 
         private bool TryFetchEntities(string table, TableConfig config, StagingMetadata metadata)
         {
-            const int chunkSize = 50; // 0;
-
-            // TODO: loop until enumerator is exhausted
+            int chunkSize = config.ChunkSize ?? CommonConfig.DefaultChunkSize;
 
             string lastUpdateText = metadata.LastTimestamp != null ?
                 metadata.LastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
@@ -128,45 +126,57 @@ namespace GiantBombDataTool
                 metadata.LastTimestamp,
                 metadata.LastId);
 
-            var enumerator = new EntityEnumerator(entities);
-            var chunk = _context.LocalStore.WriteStagedEntities(table, enumerator.Take(chunkSize));
-            if (chunk != null)
+            using var enumerator = new EntityEnumerator(entities);
+            bool first = true;
+            while (!enumerator.Finished)
             {
-                metadata.LastTimestamp = enumerator.LastTimestamp;
-                metadata.LastId = enumerator.LastId;
-                metadata.Merge.Add(chunk);
-                _context.LocalStore.SaveStagingMetadata(table, metadata);
+                var chunk = _context.LocalStore.WriteStagedEntities(table, enumerator.Take(chunkSize));
+                if (chunk != null)
+                {
+                    metadata.LastTimestamp = enumerator.LastTimestamp;
+                    metadata.LastId = enumerator.LastId;
+                    metadata.Merge.Add(chunk);
+                    _context.LocalStore.SaveStagingMetadata(table, metadata);
 
-                Console.WriteLine($"Wrote {chunk} to staging");
-            }
-            else
-            {
-                Console.WriteLine("Already up to date.");
+                    Console.WriteLine($"Wrote {chunk} to staging");
+                }
+                else if (first)
+                {
+                    Console.WriteLine("Already up to date.");
+                }
+                first = false;
             }
             return true;
         }
 
-        private sealed class EntityEnumerator : IEnumerable<TableEntity>
+        private sealed class EntityEnumerator : IEnumerable<TableEntity>, IDisposable
         {
-            // TODO: keep IEnumerator instead of IEnumerable so we enumerate only once
-            private readonly IEnumerable<TableEntity> _entities;
+            private readonly IEnumerator<TableEntity> _entities;
 
             internal EntityEnumerator(IEnumerable<TableEntity> entities)
             {
-                _entities = entities;
+                _entities = entities.GetEnumerator();
             }
 
             internal long LastId { get; private set; }
             internal DateTime LastTimestamp { get; private set; }
+            internal bool Finished { get; private set; }
+
+            public void Dispose()
+            {
+                _entities.Dispose();
+            }
 
             public IEnumerator<TableEntity> GetEnumerator()
             {
-                foreach (var entity in _entities)
+                while (_entities.MoveNext())
                 {
+                    var entity = _entities.Current;
                     LastId = entity.Id;
                     LastTimestamp = entity.Timestamp;
                     yield return entity;
                 }
+                Finished = true;
             }
 
             IEnumerator IEnumerable.GetEnumerator()

@@ -8,8 +8,22 @@ namespace GiantBombDataTool
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class CommonConfig
     {
+        public const int DefaultChunkSize = 1000;
+
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string? ApiKey { get; set; }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public int? ChunkSize { get; set; }
+
+        public void OverrideWith(CommonConfig other)
+        {
+            if (other.ApiKey != null)
+                ApiKey = other.ApiKey;
+
+            if (other.ChunkSize != null)
+                ChunkSize = other.ChunkSize;
+        }
     }
 
     public class Config : CommonConfig
