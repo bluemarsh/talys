@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace GiantBombDataTool
@@ -64,8 +63,14 @@ namespace GiantBombDataTool
                 if (!_context.LocalStore.TryInitialize(table, metadata))
                     return false;
 
-                var fetchFlow = new FetchFlow(_context.WithTables(new[] { table }));
+                var tableContext = _context.WithTables(new[] { table });
+
+                var fetchFlow = new FetchFlow(tableContext);
                 if (!fetchFlow.TryExecute())
+                    return false;
+
+                var mergeFlow = new MergeFlow(tableContext);
+                if (!mergeFlow.TryExecute())
                     return false;
             }
 
@@ -183,6 +188,70 @@ namespace GiantBombDataTool
             {
                 return GetEnumerator();
             }
+        }
+    }
+
+    public sealed class MergeFlow
+    {
+        private readonly FlowContext _context;
+
+        public MergeFlow(FlowContext context)
+        {
+            _context = context;
+        }
+
+        public bool TryExecute()
+        {
+            // TODO: share code with FetchFlow??
+            IEnumerable<string> tables;
+            if (_context.Tables.Count > 0)
+                tables = _context.Tables;
+            else
+                tables = _context.LocalStore.GetTables();
+
+            foreach (string table in tables)
+            {
+                if (!_context.LocalStore.TryLoadMetadata(table, out var tableMetadata))
+                    return false;
+
+                if (!_context.LocalStore.TryLoadStagingMetadata(table, out var stagingMetadata))
+                    continue;
+
+                if (!TryMergeEntities(table, tableMetadata, stagingMetadata))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool TryMergeEntities(string table, Metadata tableMetadata, StagingMetadata stagingMetadata)
+        {
+            while (stagingMetadata.Merge.Count > 0)
+            {
+                var chunk = stagingMetadata.Merge[0];
+
+                Console.WriteLine($"Merging {table} from {chunk}");
+
+                var entities = _context.LocalStore.ReadStagedEntities(chunk);
+                if (!_context.LocalStore.TryUpsertEntities(table, entities))
+                    return false;
+
+                stagingMetadata.Merge.RemoveAt(0);
+                if (stagingMetadata.Merge.Count > 0)
+                {
+                    _context.LocalStore.SaveStagingMetadata(table, stagingMetadata);
+                }
+                else
+                {
+                    tableMetadata.LastTimestamp = stagingMetadata.LastTimestamp;
+                    tableMetadata.LastId = stagingMetadata.LastId;
+                    _context.LocalStore.SaveMetadata(table, tableMetadata);
+                    _context.LocalStore.RemoveStagingMetadata(table);
+                }
+
+                _context.LocalStore.RemoveStagedEntities(chunk);
+            }
+            return true;
         }
     }
 }

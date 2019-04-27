@@ -110,10 +110,18 @@ namespace GiantBombDataTool
     [Verb("merge", HelpText = "Merge resources that were previously fetched into the data store.")]
     internal sealed class MergeCommand : Command
     {
+        [Option('s', "store", Required = false, Default = ".", HelpText = "Store location.")]
+        public string Store { get; set; } = string.Empty;
+
         public override int Execute()
         {
-            Console.WriteLine("Execute Merge");
-            return 0;
+            if (!TryParseCommonArgs(Store, out var flowContext))
+                return 1;
+
+            Console.WriteLine($"Merging {Tables} to {flowContext.LocalStore.Location}");
+
+            var flow = new MergeFlow(flowContext);
+            return flow.TryExecute() ? 0 : 1;
         }
     }
 }

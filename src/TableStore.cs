@@ -17,20 +17,26 @@ namespace GiantBombDataTool
     public interface ITableStore // TODO: derives IReadOnlyTableStore
     {
         object Location { get; } // TODO: move to IReadOnlyTableStore
+
+        bool TryUpsertEntities(string table, IEnumerable<TableEntity> entities);
     }
     
     public interface ITableMetadataStore
     {
+        IEnumerable<string> GetTables();
         bool TryInitialize(string table, Metadata metadata);
         bool TryLoadMetadata(string table, out Metadata metadata);
-        IEnumerable<string> GetTables();
+        void SaveMetadata(string table, Metadata metadata);
     }
 
     public interface ITableStagingStore
     {
         bool TryLoadStagingMetadata(string table, out StagingMetadata metadata);
         void SaveStagingMetadata(string table, StagingMetadata metadata);
+        void RemoveStagingMetadata(string table);
         string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities);
+        IEnumerable<TableEntity> ReadStagedEntities(string chunk);
+        void RemoveStagedEntities(string chunk);
     }
 
     public sealed class TableEntity
