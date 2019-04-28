@@ -1,15 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace GiantBombDataTool
+namespace GiantBombDataTool.Stores
 {
+    public enum TableCompressionKind
+    {
+        None,
+        GZip,
+    }
+
     public sealed class LocalJsonTableStore : ITableStore, ITableMetadataStore, ITableStagingStore
     {
+        private static readonly Encoding _encoding = Encoding.UTF8;
+
         private static readonly JsonSerializerSettings _metadataSettings = new JsonSerializerSettings
         {
             Formatting = Formatting.Indented,
@@ -29,25 +38,27 @@ namespace GiantBombDataTool
 
         public object Location => _storePath;
 
-        public bool TryUpsertEntities(string table, IEnumerable<TableEntity> entities)
+        public bool TryUpsertEntities(string table, Metadata metadata, IEnumerable<TableEntity> entities)
         {
-            string path = GetTablePath(table);
+            var compression = metadata.Config.Compression;
+
+            string path = GetTablePath(table, compression);
             bool existing = File.Exists(path);
 
-            string tempPath = GetTempTablePath(table);
+            string tempPath = GetTempTablePath(table, compression);
 
             using var entitiesEnum = entities.OrderBy(e => e.Id).GetEnumerator();
             if (!entitiesEnum.MoveNext())
                 return true;
 
             var existingEntities = existing ?
-                ReadExistingEntities(path) :
+                ReadExistingEntities(path, compression) :
                 Enumerable.Empty<TableEntity>();
 
             long insertedEntities = 0;
             long updatedEntities = 0;
 
-            using (var writer = new StreamWriter(tempPath, append: false, Encoding.UTF8))
+            using (var writer = CreateStreamWriter(tempPath, compression))
             using (var existingEntitiesEnum = existingEntities.GetEnumerator())
             {
                 var existingEntity = existingEntitiesEnum.MoveNext() ?  existingEntitiesEnum.Current : null;
@@ -185,7 +196,7 @@ namespace GiantBombDataTool
             var timestamp = enumerator.Current.Timestamp;
             string path = GetTableStagingPath(table, timestamp);
 
-            using (var writer = new StreamWriter(path, append: false, Encoding.UTF8))
+            using (var writer = CreateStreamWriter(path))
             {
                 do
                 {
@@ -209,9 +220,9 @@ namespace GiantBombDataTool
             File.Delete(path);
         }
 
-        private IEnumerable<TableEntity> ReadExistingEntities(string path)
+        private IEnumerable<TableEntity> ReadExistingEntities(string path, TableCompressionKind? compression = null)
         {
-            using (var reader = new StreamReader(path, Encoding.UTF8))
+            using (var reader = CreateStreamReader(path, compression))
             {
                 string content;
                 while ((content = reader.ReadLine()) != null)
@@ -221,8 +232,41 @@ namespace GiantBombDataTool
             }
         }
 
-        private string GetTablePath(string table) => Path.Combine(_storePath, $"{table}.jsonl");
-        private string GetTempTablePath(string table) => Path.Combine(_storePath, $"{table}.temp.jsonl");
+        private StreamReader CreateStreamReader(string path, TableCompressionKind? compression = null)
+        {
+            Stream stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            if (compression == TableCompressionKind.GZip)
+                stream = new GZipStream(stream, CompressionMode.Decompress);
+
+            return new StreamReader(stream, _encoding);
+        }
+
+        private StreamWriter CreateStreamWriter(string path, TableCompressionKind? compression = null)
+        {
+            Stream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+
+            if (compression == TableCompressionKind.GZip)
+                stream = new GZipStream(stream, CompressionMode.Compress);
+
+            return new StreamWriter(stream, _encoding);
+        }
+
+        private string GetTablePath(string table, TableCompressionKind? compression)
+        {
+            return Path.Combine(_storePath, $"{table}.jsonl") + GetCompressionSuffix(compression);
+        }
+
+        private string GetTempTablePath(string table, TableCompressionKind? compression)
+        {
+            return Path.Combine(_storePath, $"{table}.temp.jsonl") + GetCompressionSuffix(compression);
+        }
+
+        private string GetCompressionSuffix(TableCompressionKind? compression)
+        {
+            return compression == TableCompressionKind.GZip ? ".gz" : string.Empty;
+        }
+
         private string GetMetadataPath(string table) => Path.Combine(_storePath, $"{table}.metadata.json");
         private string GetStagingMetadataPath(string table) => Path.Combine(_storePath, $"{table}.staging.json");
         private string GetTableStagingPath(string table, DateTime timestamp)

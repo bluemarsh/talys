@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using GiantBombDataTool.Stores;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
 namespace GiantBombDataTool
@@ -16,6 +18,10 @@ namespace GiantBombDataTool
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public int? ChunkSize { get; set; }
 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public TableCompressionKind? Compression { get; set; }
+
         public void OverrideWith(CommonConfig other)
         {
             if (other.ApiKey != null)
@@ -23,6 +29,9 @@ namespace GiantBombDataTool
 
             if (other.ChunkSize != null)
                 ChunkSize = other.ChunkSize;
+
+            if (other.Compression != null)
+                Compression = other.Compression;
         }
     }
 

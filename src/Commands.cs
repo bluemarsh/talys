@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CommandLine;
+using GiantBombDataTool.Stores;
 using Newtonsoft.Json;
 
 namespace GiantBombDataTool
@@ -15,7 +16,10 @@ namespace GiantBombDataTool
         [Option('a', "api-key", HelpText = "API key for GiantBomb.")]
         public string? ApiKey { get; set; }
 
-        [Option('c', "chunk-size", HelpText = "Chunk size for staging files.")]
+        [Option('c', "compression", HelpText = "Compression to use for local store.")]
+        public TableCompressionKind? Compression { get; set; }
+
+        [Option("chunk-size", HelpText = "Chunk size for staging files.")]
         public int? ChunkSize { get; set; }
 
         [Option("verbose", HelpText = "Enable verbose tracing output")]
@@ -49,6 +53,9 @@ namespace GiantBombDataTool
             if (!string.IsNullOrEmpty(ApiKey))
                 config.ApiKey = ApiKey;
 
+            if (Compression != null)
+                config.Compression = Compression;
+
             if (ChunkSize != null)
                 config.ChunkSize = ChunkSize;
 
@@ -61,7 +68,7 @@ namespace GiantBombDataTool
             return config;
         }
 
-        private GiantBombTableStore CreateGiantBombStore(Config config)
+        private IReadOnlyTableStore CreateGiantBombStore(Config config)
         {
             string userAgent = CommandLine.Text.HeadingInfo.Default.ToString();
             return new GiantBombTableStore(userAgent, config.ApiKey, config.Verbose ?? false);

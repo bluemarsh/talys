@@ -18,7 +18,7 @@ namespace GiantBombDataTool
     {
         object Location { get; } // TODO: move to IReadOnlyTableStore
 
-        bool TryUpsertEntities(string table, IEnumerable<TableEntity> entities);
+        bool TryUpsertEntities(string table, Metadata metadata, IEnumerable<TableEntity> entities);
     }
     
     public interface ITableMetadataStore

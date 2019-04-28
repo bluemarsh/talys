@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using GiantBombDataTool.Stores;
 
 namespace GiantBombDataTool
 {
@@ -9,7 +10,7 @@ namespace GiantBombDataTool
     {
         public FlowContext(
             LocalJsonTableStore localStore,
-            GiantBombTableStore remoteStore,
+            IReadOnlyTableStore remoteStore,
             IReadOnlyList<string> tables,
             Config config)
         {
@@ -20,7 +21,7 @@ namespace GiantBombDataTool
         }
 
         public LocalJsonTableStore LocalStore { get; }
-        public GiantBombTableStore RemoteStore { get; }
+        public IReadOnlyTableStore RemoteStore { get; }
         public IReadOnlyList<string> Tables { get; }
         public Config Config { get; }
 
@@ -233,7 +234,7 @@ namespace GiantBombDataTool
                 Console.WriteLine($"Merging {table} from {chunk}");
 
                 var entities = _context.LocalStore.ReadStagedEntities(chunk);
-                if (!_context.LocalStore.TryUpsertEntities(table, entities))
+                if (!_context.LocalStore.TryUpsertEntities(table, tableMetadata, entities))
                     return false;
 
                 stagingMetadata.Merge.RemoveAt(0);
