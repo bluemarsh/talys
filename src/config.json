@@ -42,6 +42,29 @@
         "platforms",
         "site_detail_url"
       ]
+    },
+    "companies": {
+      "fields": [
+        "abbreviation",
+        "aliases",
+        "api_detail_url",
+        "date_added",
+        "date_founded",
+        "date_last_updated",
+        "deck",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "location_address",
+        "location_city",
+        "location_country",
+        "location_state",
+        "name",
+        "phone",
+        "site_detail_url",
+        "website"
+      ]
     }
   }
 }
