@@ -50,5 +50,15 @@ namespace GiantBombDataTool
         public IReadOnlyList<string> Fields { get; set; } = Array.Empty<string>();
 
         public bool ShouldSerializeFields() => Fields.Count > 0;
+
+        public TableConfig Clone()
+        {
+            var clone = new TableConfig
+            {
+                Fields = Fields,
+            };
+            clone.OverrideWith(this);
+            return clone;
+        }
     }
 }

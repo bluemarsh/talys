@@ -106,9 +106,20 @@ namespace GiantBombDataTool.Stores
 
             File.Move(tempPath, path);
 
-            Console.WriteLine($"Merged {insertedEntities} new and {updatedEntities} existing entities to {table}");
+            Console.WriteLine($"merged {insertedEntities} new and {updatedEntities} existing entities to {table}");
 
             return true;
+        }
+
+        public IEnumerable<TableEntity> ReadEntities(string table, Metadata metadata)
+        {
+            var compression = metadata.Config.Compression;
+
+            string path = GetTablePath(table, compression);
+
+            return File.Exists(path) ?
+                ReadExistingEntities(path, compression) :
+                Enumerable.Empty<TableEntity>();
         }
 
         public IEnumerable<string> GetTables()

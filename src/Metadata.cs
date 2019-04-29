@@ -19,6 +19,16 @@ namespace GiantBombDataTool
     {
         [JsonProperty(Required = Required.Always)]
         public TableConfig Config { get; set; } = new TableConfig();
+
+        public Metadata Clone()
+        {
+            return new Metadata
+            {
+                Config = Config.Clone(),
+                LastTimestamp = LastTimestamp,
+                LastId = LastId,
+            };
+        }
     }
 
     public sealed class StagingMetadata : CommonMetadata

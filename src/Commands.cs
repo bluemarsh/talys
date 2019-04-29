@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using CommandLine;
 using GiantBombDataTool.Stores;
@@ -143,6 +144,36 @@ namespace GiantBombDataTool
             Console.WriteLine($"Fetching {Tables} and merging to {flowContext.LocalStore.Location}");
 
             var flow = new PullFlow(flowContext);
+            return flow.TryExecute() ? 0 : 1;
+        }
+    }
+
+    [Verb("compress",HelpText = "Compresses a currently-uncompressed local store.")]
+    internal sealed class CompressCommand : LocalStoreCommand
+    {
+        public override int Execute()
+        {
+            if (!TryParseCommonArgs(Store, out var flowContext))
+                return 1;
+
+            Console.WriteLine($"Compressing {Tables} in {flowContext.LocalStore.Location}");
+
+            var flow = new CompressFlow(flowContext, CompressionMode.Compress);
+            return flow.TryExecute() ? 0 : 1;
+        }
+    }
+
+    [Verb("decompress",HelpText = "Decompresses a currently-compressed local store.")]
+    internal sealed class DecompressCommand : LocalStoreCommand
+    {
+        public override int Execute()
+        {
+            if (!TryParseCommonArgs(Store, out var flowContext))
+                return 1;
+
+            Console.WriteLine($"Decompressing {Tables} in {flowContext.LocalStore.Location}");
+
+            var flow = new CompressFlow(flowContext, CompressionMode.Decompress);
             return flow.TryExecute() ? 0 : 1;
         }
     }

@@ -35,6 +35,11 @@ namespace GiantBombDataTool.Stores
 
             while (!finished)
             {
+                string lastUpdateText = lastTimestamp != null ?
+                    lastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
+                    "forever";
+                Console.WriteLine($"Retrieving {table} updated since {lastUpdateText}");
+
                 var obj = DownloadResourceList(
                     table,
                     string.Join(",", config.Fields),

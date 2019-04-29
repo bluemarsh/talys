@@ -14,15 +14,20 @@ namespace GiantBombDataTool
 
             var parseResult = Parser.Default.ParseArguments(
                 args,
-                typeof(CloneCommand),
-                typeof(FetchCommand),
-                typeof(MergeCommand));
+                new[]
+                {
+                    typeof(CloneCommand),
+                    typeof(FetchCommand),
+                    typeof(MergeCommand),
+                    typeof(PullCommand),
+                    typeof(CompressCommand),
+                    typeof(DecompressCommand),
+                });
 
-            int commandResult = parseResult.MapResult(
-                (CloneCommand c) => c.Execute(),
-                (FetchCommand c) => c.Execute(),
-                (MergeCommand c) => c.Execute(),
-                errors => IsHelpOrVersionRequest(errors) ? 0 : 1);
+            int commandResult = 1;
+            parseResult
+                .WithParsed<Command>(c => commandResult = c.Execute())
+                .WithNotParsed(errors => commandResult = IsHelpOrVersionRequest(errors) ? 0 : 1);
 
             return commandResult;
         }

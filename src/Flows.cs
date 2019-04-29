@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using GiantBombDataTool.Stores;
 
@@ -117,10 +118,11 @@ namespace GiantBombDataTool
         {
             int chunkSize = config.ChunkSize ?? CommonConfig.DefaultChunkSize;
 
-            string lastUpdateText = metadata.LastTimestamp != null ?
-                metadata.LastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
-                "forever";
-            Console.WriteLine($"Retrieving {table} updated since {lastUpdateText}");
+            // Currently writing in GetEntitiesByTimestamp, need to rethink status writes
+            //string lastUpdateText = metadata.LastTimestamp != null ?
+            //    metadata.LastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
+            //    "forever";
+            //Console.WriteLine($"Retrieving {table} updated since {lastUpdateText}");
 
             var entities = _context.RemoteStore.GetEntitiesByTimestamp(
                 table,
@@ -144,7 +146,7 @@ namespace GiantBombDataTool
                 }
                 else if (first)
                 {
-                    Console.WriteLine("Already up to date.");
+                    Console.WriteLine($"{table} already up to date.");
                 }
                 first = false;
             }
@@ -227,7 +229,7 @@ namespace GiantBombDataTool
             {
                 var chunk = stagingMetadata.Merge[0];
 
-                Console.WriteLine($"Merging {table} from {chunk}");
+                Console.Write($"Merging {table} from {chunk}... ");
 
                 var entities = _context.LocalStore.ReadStagedEntities(chunk);
                 if (!_context.LocalStore.TryUpsertEntities(table, tableMetadata, entities))
@@ -270,6 +272,66 @@ namespace GiantBombDataTool
             var mergeFlow = new MergeFlow(_context);
             if (!mergeFlow.TryExecute())
                 return false;
+
+            return true;
+        }
+    }
+
+    public sealed class CompressFlow
+    {
+        private readonly FlowContext _context;
+        private readonly CompressionMode _mode;
+
+        public CompressFlow(FlowContext context, CompressionMode mode)
+        {
+            _context = context;
+            _mode = mode;
+        }
+
+        public bool TryExecute()
+        {
+            // TODO: share code with FetchFlow??
+            IEnumerable<string> tables;
+            if (_context.Tables.Count > 0)
+                tables = _context.Tables;
+            else
+                tables = _context.LocalStore.GetTables();
+
+            foreach (string table in tables)
+            {
+                if (!_context.LocalStore.TryLoadMetadata(table, out var tableMetadata))
+                    return false;
+
+                var currentMode = tableMetadata.Config.Compression == TableCompressionKind.GZip ?
+                    CompressionMode.Compress :
+                    CompressionMode.Decompress;
+
+                if (currentMode == _mode)
+                {
+                    Console.WriteLine($"{table} is already {currentMode.ToString().ToLowerInvariant()}ed");
+                    continue;
+                }
+
+                Console.Write($"{_mode}ing {table}... ");
+
+                var newMetadata = tableMetadata.Clone();
+
+                newMetadata.Config.Compression = _mode == CompressionMode.Compress ?
+                    TableCompressionKind.GZip :
+                    TableCompressionKind.None;
+
+                var entities = _context.LocalStore.ReadEntities(table, tableMetadata);
+                _context.LocalStore.TryUpsertEntities(table, newMetadata, entities);
+
+                _context.LocalStore.SaveMetadata(table, newMetadata);
+
+                // TODO: this leaves behind the original table file, ideally would clean up
+                // Would need an ITableStore method to truncate the table or something
+                // However, maybe compression should just be handled by the store directly
+                // -- I'm assuming here that reading and writing entities simultaneously
+                // with different compression options is safe, but that only is true when
+                // the store is using separate files for each.
+            }
 
             return true;
         }
