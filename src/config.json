@@ -1,24 +1,27 @@
 {
   "apiKey": "",
   "tables": {
-    "platforms": {
+    "companies": {
       "fields": [
         "abbreviation",
+        "aliases",
         "api_detail_url",
-        "company",
         "date_added",
+        "date_founded",
         "date_last_updated",
         "deck",
         "guid",
         "id",
         "image",
         "image_tags",
-        "install_base",
+        "location_address",
+        "location_city",
+        "location_country",
+        "location_state",
         "name",
-        "online_support",
-        "original_price",
-        "release_date",
-        "site_detail_url"
+        "phone",
+        "site_detail_url",
+        "website"
       ]
     },
     "games": {
@@ -43,27 +46,55 @@
         "site_detail_url"
       ]
     },
-    "companies": {
+    "platforms": {
       "fields": [
         "abbreviation",
-        "aliases",
         "api_detail_url",
+        "company",
         "date_added",
-        "date_founded",
         "date_last_updated",
         "deck",
         "guid",
         "id",
         "image",
         "image_tags",
-        "location_address",
-        "location_city",
-        "location_country",
-        "location_state",
+        "install_base",
         "name",
-        "phone",
+        "online_support",
+        "original_price",
+        "release_date",
+        "site_detail_url"
+      ]
+    },
+    "releases": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "expected_release_day",
+        "expected_release_month",
+        "expected_release_quarter",
+        "expected_release_year",
+        "game",
+        "game_rating",
+        "guid",
+        "id",
+        "image",
+        "maximum_players",
+        "minimum_players",
+        "multiplayer_features",
+        "name",
+        "platform",
+        "product_code_type",
+        "product_code_value",
+        "region",
+        "release_date",
+        "resolutions",
+        "singleplayer_features",
+        "sound_systems",
         "site_detail_url",
-        "website"
+        "widescreen_support"
       ]
     }
   }

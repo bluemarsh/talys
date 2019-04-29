@@ -177,4 +177,8 @@ namespace GiantBombDataTool
             return flow.TryExecute() ? 0 : 1;
         }
     }
+
+    // TODO: additional commands
+    // - clean (download id-only list, remove entities that are no longer present)
+    // - status (print last timestamps for each table in local store? and last clean time?)
 }

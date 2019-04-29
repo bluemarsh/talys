@@ -40,6 +40,10 @@ namespace GiantBombDataTool.Stores
                     "forever";
                 Console.WriteLine($"Retrieving {table} updated since {lastUpdateText}");
 
+                // TODO: we could hit an infinite loop here if there are more items with the same timestamp than the page limit
+                // if this happened, would need to implement paging (with offset) to handle this case -- use offset of one less
+                // than limit and ensure that the first item of next page matches the last item of the previous page
+
                 var obj = DownloadResourceList(
                     table,
                     string.Join(",", config.Fields),

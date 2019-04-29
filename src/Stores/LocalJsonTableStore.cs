@@ -167,6 +167,7 @@ namespace GiantBombDataTool.Stores
 
         public void SaveMetadata(string table, Metadata metadata)
         {
+            // TODO: make all file write operations atomic
             string path = GetMetadataPath(table);
             File.WriteAllText(path, JsonConvert.SerializeObject(metadata, _metadataSettings));
         }
