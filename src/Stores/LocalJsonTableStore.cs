@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,7 +12,10 @@ namespace GiantBombDataTool.Stores
 {
     public enum TableCompressionKind
     {
+        [EnumMember(Value = "none")]
         None,
+
+        [EnumMember(Value ="gzip")]
         GZip,
     }
 

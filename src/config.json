@@ -1,6 +1,40 @@
 {
   "apiKey": "",
   "tables": {
+    "accessories": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "name",
+        "site_detail_url"
+      ]
+    },
+    "characters": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "birthday",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "first_appeared_in_game",
+        "gender",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "last_name",
+        "name",
+        "real_name",
+        "site_detail_url"
+      ]
+    },
     "companies": {
       "fields": [
         "abbreviation",
@@ -24,6 +58,54 @@
         "website"
       ]
     },
+    "concepts": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "first_appeared_in_franchise",
+        "first_appeared_in_game",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "name",
+        "site_detail_url"
+      ]
+    },
+    "dlcs": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "game",
+        "guid",
+        "id",
+        "image",
+        "name",
+        "platform",
+        "release_date",
+        "site_detail_url"
+      ]
+    },
+    "franchises": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "name",
+        "site_detail_url"
+      ]
+    },
     "games": {
       "fields": [
         "aliases",
@@ -43,6 +125,46 @@
         "original_game_rating",
         "original_release_date",
         "platforms",
+        "site_detail_url"
+      ]
+    },
+    // no updated field, need special handling
+    //"game_ratings": {
+    //  "fields": [
+    //    "api_detail_url",
+    //    "guid",
+    //    "id",
+    //    "image",
+    //    "name",
+    //    "rating_board"
+    //  ]
+    //},
+    "genres": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "guid",
+        "id",
+        "image",
+        "name",
+        "site_detail_url"
+      ]
+    },
+    "locations": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "first_appeared_in_game",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "name",
         "site_detail_url"
       ]
     },
