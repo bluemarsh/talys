@@ -66,12 +66,8 @@ namespace GiantBombDataTool
 
                 var tableContext = _context.WithTables(new[] { table });
 
-                var fetchFlow = new FetchFlow(tableContext);
-                if (!fetchFlow.TryExecute())
-                    return false;
-
-                var mergeFlow = new MergeFlow(tableContext);
-                if (!mergeFlow.TryExecute())
+                var pullFlow = new PullFlow(tableContext);
+                if (!pullFlow.TryExecute())
                     return false;
             }
 
@@ -252,6 +248,29 @@ namespace GiantBombDataTool
 
                 _context.LocalStore.RemoveStagedEntities(chunk);
             }
+            return true;
+        }
+    }
+
+    public sealed class PullFlow
+    {
+        private readonly FlowContext _context;
+
+        public PullFlow(FlowContext context)
+        {
+            _context = context;
+        }
+
+        public bool TryExecute()
+        {
+            var fetchFlow = new FetchFlow(_context);
+            if (!fetchFlow.TryExecute())
+                return false;
+
+            var mergeFlow = new MergeFlow(_context);
+            if (!mergeFlow.TryExecute())
+                return false;
+
             return true;
         }
     }

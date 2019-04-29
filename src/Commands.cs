@@ -96,12 +96,15 @@ namespace GiantBombDataTool
         }
     }
 
-    [Verb("fetch", HelpText = "Fetch latest GiantBomb resources without merging into the data store.")]
-    internal sealed class FetchCommand : Command
+    internal abstract class LocalStoreCommand : Command
     {
         [Option('s', "store", Required = false, Default = ".", HelpText = "Store location.")]
         public string Store { get; set; } = string.Empty;
+    }
 
+    [Verb("fetch", HelpText = "Fetch latest changes without merging into them into the local store.")]
+    internal sealed class FetchCommand : LocalStoreCommand
+    {
         public override int Execute()
         {
             if (!TryParseCommonArgs(Store, out var flowContext))
@@ -114,12 +117,9 @@ namespace GiantBombDataTool
         }
     }
 
-    [Verb("merge", HelpText = "Merge resources that were previously fetched into the data store.")]
-    internal sealed class MergeCommand : Command
+    [Verb("merge", HelpText = "Merge resources that were previously fetched into the local store.")]
+    internal sealed class MergeCommand : LocalStoreCommand
     {
-        [Option('s', "store", Required = false, Default = ".", HelpText = "Store location.")]
-        public string Store { get; set; } = string.Empty;
-
         public override int Execute()
         {
             if (!TryParseCommonArgs(Store, out var flowContext))
@@ -128,6 +128,21 @@ namespace GiantBombDataTool
             Console.WriteLine($"Merging {Tables} to {flowContext.LocalStore.Location}");
 
             var flow = new MergeFlow(flowContext);
+            return flow.TryExecute() ? 0 : 1;
+        }
+    }
+
+    [Verb("pull", HelpText = "Fetch latest changes and merge them into the local store.")]
+    internal sealed class PullCommand : LocalStoreCommand
+    {
+        public override int Execute()
+        {
+            if (!TryParseCommonArgs(Store, out var flowContext))
+                return 1;
+
+            Console.WriteLine($"Fetching {Tables} and merging to {flowContext.LocalStore.Location}");
+
+            var flow = new PullFlow(flowContext);
             return flow.TryExecute() ? 0 : 1;
         }
     }

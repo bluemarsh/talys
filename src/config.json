@@ -9,13 +9,37 @@
         "date_added",
         "date_last_updated",
         "deck",
+        "guid",
         "id",
         "image",
+        "image_tags",
         "install_base",
         "name",
         "online_support",
         "original_price",
         "release_date",
+        "site_detail_url"
+      ]
+    },
+    "games": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "expected_release_month",
+        "expected_release_quarter",
+        "expected_release_year",
+        "guid",
+        "id",
+        "image",
+        "image_tags",
+        "name",
+        "number_of_user_reviews",
+        "original_game_rating",
+        "original_release_date",
+        "platforms",
         "site_detail_url"
       ]
     }
