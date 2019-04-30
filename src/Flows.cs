@@ -109,6 +109,9 @@ namespace GiantBombDataTool
 
                 if (!TryFetchEntities(table, tableMetadata.Config, stagingMetadata))
                     return false;
+
+                if (stagingMetadata.FetchDetail.Count > 0 && !TryFetchDetail(table, tableMetadata.Config, stagingMetadata))
+                    return false;
             }
 
             return true;
@@ -118,7 +121,7 @@ namespace GiantBombDataTool
         {
             int chunkSize = config.ChunkSize ?? CommonConfig.DefaultChunkSize;
 
-            // Currently writing in GetEntitiesByTimestamp, need to rethink status writes
+            // TODO: Currently writing in GetEntitiesByTimestamp, need to rethink status writes
             //string lastUpdateText = metadata.LastTimestamp != null ?
             //    metadata.LastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
             //    "forever";
@@ -139,7 +142,12 @@ namespace GiantBombDataTool
                 {
                     metadata.LastTimestamp = enumerator.LastTimestamp;
                     metadata.LastId = enumerator.LastId;
-                    metadata.Merge.Add(chunk);
+
+                    if (config.DetailFields.Count > 0)
+                        metadata.FetchDetail.Add(chunk);
+                    else
+                        metadata.Merge.Add(chunk);
+
                     _context.LocalStore.SaveStagingMetadata(table, metadata);
 
                     Console.WriteLine($"Wrote {chunk} to staging");
@@ -151,6 +159,42 @@ namespace GiantBombDataTool
                 first = false;
             }
             return true;
+        }
+
+        private bool TryFetchDetail(string table, TableConfig config, StagingMetadata metadata)
+        {
+            int chunkSize = config.ChunkSize ?? CommonConfig.DefaultDetailChunkSize;
+
+            while (metadata.FetchDetail.Count > 0)
+            {
+                var chunk = metadata.FetchDetail.First();
+
+                var entities = GetEntitiesToFetchDetail(table, chunk, config);
+
+                // TODO: chunk this into smaller files or create smaller fetchDetail chunks in the first place (change the chunkSize in TryFetchEntities)
+                var detailChunk = _context.LocalStore.WriteStagedEntities(table, entities, chunk);
+                if (detailChunk != null)
+                {
+                    metadata.Merge.Add(detailChunk);
+                    Console.WriteLine($"Wrote {detailChunk} to staging");
+                }
+
+                metadata.FetchDetail.Remove(chunk);
+                _context.LocalStore.SaveStagingMetadata(table, metadata);
+                _context.LocalStore.RemoveStagedEntities(chunk);
+            }
+            return true;
+        }
+
+        private IEnumerable<TableEntity> GetEntitiesToFetchDetail(string table, string chunk, TableConfig config)
+        {
+            foreach (var entity in _context.LocalStore.ReadStagedEntities(chunk))
+            {
+                yield return _context.RemoteStore.GetEntityDetail(
+                    table,
+                    config,
+                    entity);
+            }
         }
 
         private sealed class EntityEnumerator : IEnumerable<TableEntity>, IDisposable
@@ -227,7 +271,7 @@ namespace GiantBombDataTool
         {
             while (stagingMetadata.Merge.Count > 0)
             {
-                var chunk = stagingMetadata.Merge[0];
+                var chunk = stagingMetadata.Merge.First();
 
                 Console.Write($"Merging {table} from {chunk}... ");
 
@@ -235,7 +279,7 @@ namespace GiantBombDataTool
                 if (!_context.LocalStore.TryUpsertEntities(table, tableMetadata, entities))
                     return false;
 
-                stagingMetadata.Merge.RemoveAt(0);
+                stagingMetadata.Merge.Remove(chunk);
                 if (stagingMetadata.Merge.Count > 0)
                 {
                     _context.LocalStore.SaveStagingMetadata(table, stagingMetadata);

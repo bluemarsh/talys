@@ -51,7 +51,14 @@ namespace GiantBombDataTool.Stores
 
             string tempPath = GetTempTablePath(table, compression);
 
-            using var entitiesEnum = entities.OrderBy(e => e.Id).GetEnumerator();
+            // Need to handle duplicate entities in case an edit occurred during fetch, resulting in the entity
+            // added twice to staging files (select last one with the latest timestamp)
+            using var entitiesEnum =
+                (from e in entities
+                 group e by e.Id into dups
+                 orderby dups.Key
+                 select dups.Last(e => e.Timestamp == dups.Max(d => d.Timestamp))).GetEnumerator();
+
             if (!entitiesEnum.MoveNext())
                 return true;
 
@@ -203,14 +210,14 @@ namespace GiantBombDataTool.Stores
             File.Delete(path);
         }
 
-        public string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities)
+        public string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities, string? detailForChunk = null)
         {
             var enumerator = entities.GetEnumerator();
             if (!enumerator.MoveNext())
                 return null;
 
             var timestamp = enumerator.Current.Timestamp;
-            string path = GetTableStagingPath(table, timestamp);
+            string path = GetTableStagingPath(table, timestamp, detailForChunk);
 
             using (var writer = CreateStreamWriter(path))
             {
@@ -240,10 +247,22 @@ namespace GiantBombDataTool.Stores
         {
             using (var reader = CreateStreamReader(path, compression))
             {
+                DateTime? lastTimestamp = null;
+                long? lastId = null;
                 string content;
                 while ((content = reader.ReadLine()) != null)
                 {
-                    yield return new TableEntity(JsonConvert.DeserializeObject<JObject>(content, _contentSettings));
+                    var entity = new TableEntity(JsonConvert.DeserializeObject<JObject>(content, _contentSettings));
+
+                    // TODO: warn on this if it happens in local store file (skip detection for staging, handled by upsert)
+                    // and check for matching id but different timestamp (shouldn't happen, just a sanity check)
+                    if (entity.Id == lastId && entity.Timestamp == lastTimestamp)
+                        continue;
+
+                    lastId = entity.Id;
+                    lastTimestamp = entity.Timestamp;
+
+                    yield return entity;
                 }
             }
         }
@@ -283,10 +302,17 @@ namespace GiantBombDataTool.Stores
             return compression == TableCompressionKind.GZip ? ".gz" : string.Empty;
         }
 
+        private string GetTableStagingPath(string table, DateTime timestamp, string? detailForChunk)
+        {
+            string chunk = detailForChunk != null ?
+                Path.ChangeExtension(detailForChunk, ".detail.jsonl") :
+                $"{table}.{timestamp:yyyyMMddHHmmss}.jsonl";
+
+            return GetTableStagingPath(chunk);
+        }
+
         private string GetMetadataPath(string table) => Path.Combine(_storePath, $"{table}.metadata.json");
         private string GetStagingMetadataPath(string table) => Path.Combine(_storePath, $"{table}.staging.json");
-        private string GetTableStagingPath(string table, DateTime timestamp)
-            => Path.Combine(_storePath, $"{table}.{timestamp:yyyyMMddHHmmss}.jsonl");
         private string GetTableStagingPath(string chunk)
             => Path.Combine(_storePath, chunk);
     }

@@ -6,12 +6,12 @@ namespace GiantBombDataTool
 {
     public interface IReadOnlyTableStore
     {
-        //StoreMetadata CreateMetadata(StoreConfig config);
         IEnumerable<TableEntity> GetEntitiesByTimestamp(
             string table,
             TableConfig config,
             DateTime? lastTimestamp,
             long? lastId);
+        TableEntity GetEntityDetail(string table, TableConfig config, TableEntity entity);
     }
 
     public interface ITableStore // TODO: derives IReadOnlyTableStore
@@ -35,7 +35,7 @@ namespace GiantBombDataTool
         bool TryLoadStagingMetadata(string table, out StagingMetadata metadata);
         void SaveStagingMetadata(string table, StagingMetadata metadata);
         void RemoveStagingMetadata(string table);
-        string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities);
+        string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities, string? detailForChunk);
         IEnumerable<TableEntity> ReadStagedEntities(string chunk);
         void RemoveStagedEntities(string chunk);
     }

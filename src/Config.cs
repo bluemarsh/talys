@@ -11,6 +11,7 @@ namespace GiantBombDataTool
     public class CommonConfig
     {
         public const int DefaultChunkSize = 1000;
+        public const int DefaultDetailChunkSize = 100;
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string? ApiKey { get; set; }
@@ -49,7 +50,10 @@ namespace GiantBombDataTool
     {
         public IReadOnlyList<string> Fields { get; set; } = Array.Empty<string>();
 
+        public IReadOnlyList<string> DetailFields { get; set; } = Array.Empty<string>();
+
         public bool ShouldSerializeFields() => Fields.Count > 0;
+        public bool ShouldSerializeDetailFields() => DetailFields.Count > 0;
 
         public TableConfig Clone()
         {

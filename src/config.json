@@ -126,6 +126,23 @@
         "original_release_date",
         "platforms",
         "site_detail_url"
+      ],
+      "detailFields": [
+        "characters",
+        "concepts",
+        "developers",
+        "expected_release_day",
+        "franchises",
+        "genres",
+        "images",
+        "killed_characters",
+        "locations",
+        "objects",
+        "people",
+        "publishers",
+        "similar_games",
+        "themes",
+        "videos"
       ]
     },
     // no updated field, need special handling

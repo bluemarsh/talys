@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using Newtonsoft.Json.Linq;
@@ -44,22 +45,20 @@ namespace GiantBombDataTool.Stores
                 // if this happened, would need to implement paging (with offset) to handle this case -- use offset of one less
                 // than limit and ensure that the first item of next page matches the last item of the previous page
 
-                var obj = DownloadResourceList(
+                var result = DownloadResourceList(
                     table,
                     string.Join(",", config.Fields),
                     sort: "date_last_updated:asc",
                     dateLastUpdated: lastTimestamp);
 
-                finished = obj["number_of_page_results"].Value<long>() == obj["number_of_total_results"].Value<long>();
+                finished = result["number_of_page_results"].Value<long>() == result["number_of_total_results"].Value<long>();
 
-                foreach (var item in obj["results"])
+                foreach (var item in result["results"])
                 {
-                    long id = item["id"].Value<long>();
-                    var timestamp = DateTime.Parse(
-                        item["date_last_updated"].Value<string>().Replace(' ', 'T') + 'Z',
-                        CultureInfo.InvariantCulture,
-                        DateTimeStyles.AdjustToUniversal);
+                    var (id, timestamp) = ParseEntityProperties(item);
 
+                    // TODO: handle multiple ids with the same timestamp (so we don't create staging file
+                    // with only existing content, although it is handled correctly by upsert anyway)
                     if (id == lastId && timestamp == lastTimestamp)
                         continue; // don't add the last item again
 
@@ -68,6 +67,35 @@ namespace GiantBombDataTool.Stores
                     yield return new TableEntity(id, timestamp, (JObject)item);
                 }
             }
+        }
+
+        public TableEntity GetEntityDetail(string table, TableConfig config, TableEntity entity)
+        {
+            if (string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(config.ApiKey))
+                _apiKey = config.ApiKey;
+
+            string url = entity.Content["api_detail_url"].Value<string>();
+
+            Console.WriteLine($"Retrieving {url}");
+
+            var result = DownloadResourceDetail(
+                url,
+                string.Join(",", config.Fields.Concat(config.DetailFields)));
+            var detail = (JObject)result["results"];
+
+            var (id, timestamp) = ParseEntityProperties(detail);
+
+            return new TableEntity(id, timestamp, detail);
+        }
+
+        private static (long Id, DateTime Timestamp) ParseEntityProperties(JToken item)
+        {
+            long id = item["id"].Value<long>();
+            var timestamp = DateTime.Parse(
+                item["date_last_updated"].Value<string>().Replace(' ', 'T') + 'Z',
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal);
+            return (id, timestamp);
         }
 
         private JObject DownloadResourceList(
