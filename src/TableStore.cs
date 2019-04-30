@@ -35,7 +35,11 @@ namespace GiantBombDataTool
         bool TryLoadStagingMetadata(string table, out StagingMetadata metadata);
         void SaveStagingMetadata(string table, StagingMetadata metadata);
         void RemoveStagingMetadata(string table);
-        string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities, string? detailForChunk);
+        string? WriteStagedEntities(
+            string table,
+            IEnumerable<TableEntity> entities,
+            bool detailChunkById = false,
+            string? detailForChunk = null);
         IEnumerable<TableEntity> ReadStagedEntities(string chunk);
         void RemoveStagedEntities(string chunk);
     }

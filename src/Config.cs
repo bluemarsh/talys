@@ -7,6 +7,13 @@ using Newtonsoft.Json.Serialization;
 
 namespace GiantBombDataTool
 {
+    public enum DetailBehavior
+    {
+        Default,
+        Backfill,
+        Skip,
+    }
+
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class CommonConfig
     {
@@ -17,22 +24,28 @@ namespace GiantBombDataTool
         public string? ApiKey { get; set; }
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public TableCompressionKind? Compression { get; set; }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public int? ChunkSize { get; set; }
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public TableCompressionKind? Compression { get; set; }
+        public DetailBehavior? Detail { get; set; }
 
         public void OverrideWith(CommonConfig other)
         {
             if (other.ApiKey != null)
                 ApiKey = other.ApiKey;
 
+            if (other.Compression != null)
+                Compression = other.Compression;
+
             if (other.ChunkSize != null)
                 ChunkSize = other.ChunkSize;
 
-            if (other.Compression != null)
-                Compression = other.Compression;
+            if (other.Detail != null)
+                Detail = other.Detail;
         }
     }
 

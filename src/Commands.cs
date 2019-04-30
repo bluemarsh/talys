@@ -23,6 +23,9 @@ namespace GiantBombDataTool
         [Option("chunk-size", HelpText = "Chunk size for staging files.")]
         public int? ChunkSize { get; set; }
 
+        [Option("detail", HelpText = "Fetch detail behavior.")]
+        public DetailBehavior? Detail { get; set; }
+
         [Option("verbose", HelpText = "Enable verbose tracing output")]
         public bool Verbose { get; set; }
 
@@ -59,6 +62,9 @@ namespace GiantBombDataTool
 
             if (ChunkSize != null)
                 config.ChunkSize = ChunkSize;
+
+            if (Detail != null)
+                config.Detail = Detail;
 
             if (Verbose)
                 config.Verbose = true;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -210,14 +211,21 @@ namespace GiantBombDataTool.Stores
             File.Delete(path);
         }
 
-        public string? WriteStagedEntities(string table, IEnumerable<TableEntity> entities, string? detailForChunk = null)
+        public string? WriteStagedEntities(
+            string table,
+            IEnumerable<TableEntity> entities,
+            bool detailChunkById = false,
+            string? detailForChunk = null)
         {
+            Trace.Assert(!detailChunkById || detailForChunk is null, "Only one chunk argument can be specified.");
+
             var enumerator = entities.GetEnumerator();
             if (!enumerator.MoveNext())
                 return null;
 
             var timestamp = enumerator.Current.Timestamp;
-            string path = GetTableStagingPath(table, timestamp, detailForChunk);
+            var id = enumerator.Current.Id;
+            string path = GetTableStagingPath(table, timestamp, id, detailChunkById, detailForChunk);
 
             using (var writer = CreateStreamWriter(path))
             {
@@ -302,10 +310,16 @@ namespace GiantBombDataTool.Stores
             return compression == TableCompressionKind.GZip ? ".gz" : string.Empty;
         }
 
-        private string GetTableStagingPath(string table, DateTime timestamp, string? detailForChunk)
+        private string GetTableStagingPath(
+            string table,
+            DateTime timestamp,
+            long id,
+            bool detailChunkById,
+            string? detailForChunk)
         {
-            string chunk = detailForChunk != null ?
-                Path.ChangeExtension(detailForChunk, ".detail.jsonl") :
+            string chunk = 
+                detailForChunk != null ?  Path.ChangeExtension(detailForChunk, ".detail.jsonl") :
+                detailChunkById ? $"{table}.{id}.detail.jsonl" :
                 $"{table}.{timestamp:yyyyMMddHHmmss}.jsonl";
 
             return GetTableStagingPath(chunk);

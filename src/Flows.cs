@@ -98,6 +98,9 @@ namespace GiantBombDataTool
                 if (!_context.LocalStore.TryLoadMetadata(table, out var tableMetadata))
                     return false;
 
+                // NOTE: overrides are applied transiently (not persisted to store)
+                tableMetadata.Config.OverrideWith(_context.Config);
+
                 if (!_context.LocalStore.TryLoadStagingMetadata(table, out var stagingMetadata))
                 {
                     stagingMetadata = new StagingMetadata
@@ -110,7 +113,7 @@ namespace GiantBombDataTool
                 if (!TryFetchEntities(table, tableMetadata.Config, stagingMetadata))
                     return false;
 
-                if (stagingMetadata.FetchDetail.Count > 0 && !TryFetchDetail(table, tableMetadata.Config, stagingMetadata))
+                if (stagingMetadata.FetchDetail.Count > 0 && !TryFetchDetail(table, tableMetadata, stagingMetadata))
                     return false;
             }
 
@@ -143,7 +146,7 @@ namespace GiantBombDataTool
                     metadata.LastTimestamp = enumerator.LastTimestamp;
                     metadata.LastId = enumerator.LastId;
 
-                    if (config.DetailFields.Count > 0)
+                    if (config.DetailFields.Count > 0 && config.Detail != DetailBehavior.Skip)
                         metadata.FetchDetail.Add(chunk);
                     else
                         metadata.Merge.Add(chunk);
@@ -161,8 +164,9 @@ namespace GiantBombDataTool
             return true;
         }
 
-        private bool TryFetchDetail(string table, TableConfig config, StagingMetadata metadata)
+        private bool TryFetchDetail(string table, Metadata tableMetadata, StagingMetadata metadata)
         {
+            var config = tableMetadata.Config;
             int chunkSize = config.ChunkSize ?? CommonConfig.DefaultDetailChunkSize;
 
             while (metadata.FetchDetail.Count > 0)
@@ -172,7 +176,7 @@ namespace GiantBombDataTool
                 var entities = GetEntitiesToFetchDetail(table, chunk, config);
 
                 // TODO: chunk this into smaller files or create smaller fetchDetail chunks in the first place (change the chunkSize in TryFetchEntities)
-                var detailChunk = _context.LocalStore.WriteStagedEntities(table, entities, chunk);
+                var detailChunk = _context.LocalStore.WriteStagedEntities(table, entities, detailForChunk: chunk);
                 if (detailChunk != null)
                 {
                     metadata.Merge.Add(detailChunk);
@@ -183,6 +187,17 @@ namespace GiantBombDataTool
                 _context.LocalStore.SaveStagingMetadata(table, metadata);
                 _context.LocalStore.RemoveStagedEntities(chunk);
             }
+
+            if (config.Detail == DetailBehavior.Backfill)
+            {
+                var entities = _context.LocalStore.ReadEntities(table, tableMetadata);
+                
+                // TODO: finish implementation
+                // - move entities into an iterator method that checks if any detailFields are missing
+                // - refactor GetEntitiesToFetchDetail and reuse
+                // - use chunking with EntityEnumerator to write staged entities
+            }
+
             return true;
         }
 
