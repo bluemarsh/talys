@@ -118,12 +118,29 @@ namespace GiantBombDataTool.Stores
 
         private JObject DownloadCore(Uri uri)
         {
+            const int MaxRetries = 3;
+
             EnforceRateLimit();
 
             Trace.WriteLineIf(_verbose, string.Empty);
             Trace.WriteLineIf(_verbose, uri, typeof(GiantBombTableStore).Name);
 
-            var json = _webClient.DownloadString(uri);
+            string json;
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    json = _webClient.DownloadString(uri);
+                    break;
+                }
+                catch (WebException ex) when (attempt < MaxRetries)
+                {
+                    Console.WriteLine($"Retrying after failed {attempt + 1} time(s) with {ex.Status}: {ex.Message}");
+                    EnforceRateLimit();
+                    Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(3, attempt)));
+                }
+            }
+
             var obj = JObject.Parse(json);
 
             if (obj["status_code"].Value<int>() != 1)
@@ -134,7 +151,6 @@ namespace GiantBombDataTool.Stores
 
         private void EnforceRateLimit()
         {
-            // TODO: GiantBomb has new rate limits (200 requests per resource per hour), will need to account for this
             if (DateTime.UtcNow < _nextRequest)
                 Thread.Sleep(_nextRequest - DateTime.UtcNow);
             _nextRequest = DateTime.UtcNow + TimeSpan.FromMilliseconds(1001);
