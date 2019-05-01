@@ -71,5 +71,7 @@ namespace GiantBombDataTool
         public long Id => Content[IdProperty].Value<long>();
         public DateTime Timestamp => Content[TimestampProperty].Value<DateTime>();
         public JObject Content { get; }
+
+        public IDictionary<string, JToken> Properties => Content;
     }
 }

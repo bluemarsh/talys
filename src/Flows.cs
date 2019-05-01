@@ -101,6 +101,8 @@ namespace GiantBombDataTool
                 // NOTE: overrides are applied transiently (not persisted to store)
                 tableMetadata.Config.OverrideWith(_context.Config);
 
+                // TODO: inherit fields/detailFields from base config if not specified in metadata config
+
                 if (!_context.LocalStore.TryLoadStagingMetadata(table, out var stagingMetadata))
                 {
                     stagingMetadata = new StagingMetadata
@@ -113,7 +115,7 @@ namespace GiantBombDataTool
                 if (!TryFetchEntities(table, tableMetadata.Config, stagingMetadata))
                     return false;
 
-                if (stagingMetadata.FetchDetail.Count > 0 && !TryFetchDetail(table, tableMetadata, stagingMetadata))
+                if (!TryFetchDetail(table, tableMetadata, stagingMetadata))
                     return false;
             }
 
@@ -173,7 +175,10 @@ namespace GiantBombDataTool
             {
                 var chunk = metadata.FetchDetail.First();
 
-                var entities = GetEntitiesToFetchDetail(table, chunk, config);
+                var entities = GetDetailForEntities(
+                    table,
+                    config,
+                    _context.LocalStore.ReadStagedEntities(chunk));
 
                 // TODO: chunk this into smaller files or create smaller fetchDetail chunks in the first place (change the chunkSize in TryFetchEntities)
                 var detailChunk = _context.LocalStore.WriteStagedEntities(table, entities, detailForChunk: chunk);
@@ -190,25 +195,50 @@ namespace GiantBombDataTool
 
             if (config.Detail == DetailBehavior.Backfill)
             {
-                var entities = _context.LocalStore.ReadEntities(table, tableMetadata);
-                
-                // TODO: finish implementation
-                // - move entities into an iterator method that checks if any detailFields are missing
-                // - refactor GetEntitiesToFetchDetail and reuse
-                // - use chunking with EntityEnumerator to write staged entities
+                var entities = GetDetailForEntities(
+                    table,
+                    config,
+                    GetEntitiesToBackfillDetail(table, tableMetadata, metadata.DetailLastId));
+
+                using var enumerator = new EntityEnumerator(entities);
+                while (!enumerator.Finished)
+                {
+                    var chunk = _context.LocalStore.WriteStagedEntities(
+                        table,
+                        enumerator.Take(chunkSize),
+                        detailChunkById: true);
+
+                    if (chunk == null)
+                        continue;
+
+                    metadata.DetailLastId = enumerator.LastId;
+                    metadata.Merge.Add(chunk);
+                    _context.LocalStore.SaveStagingMetadata(table, metadata);
+
+                    Console.WriteLine($"Wrote {chunk} to staging");
+                }
             }
 
             return true;
         }
 
-        private IEnumerable<TableEntity> GetEntitiesToFetchDetail(string table, string chunk, TableConfig config)
+        private IEnumerable<TableEntity> GetDetailForEntities(string table, TableConfig config, IEnumerable<TableEntity> entities)
         {
-            foreach (var entity in _context.LocalStore.ReadStagedEntities(chunk))
+            foreach (var entity in entities)
+                yield return _context.RemoteStore.GetEntityDetail(table, config, entity);
+        }
+
+        private IEnumerable<TableEntity> GetEntitiesToBackfillDetail(string table, Metadata tableMetadata, long? detailLastId)
+        {
+            var detailFields = tableMetadata.Config.DetailFields;
+
+            foreach (var entity in _context.LocalStore.ReadEntities(table, tableMetadata))
             {
-                yield return _context.RemoteStore.GetEntityDetail(
-                    table,
-                    config,
-                    entity);
+                if (detailLastId != null && entity.Id <= detailLastId)
+                    continue;
+
+                if (entity.Properties.Keys.Intersect(detailFields).Count() != detailFields.Count)
+                    yield return entity;
             }
         }
 
