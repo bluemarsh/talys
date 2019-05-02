@@ -37,10 +37,10 @@ namespace GiantBombDataTool
         public long? DetailLastId { get; set; }
 
         [JsonProperty(Order = 110)]
-        public HashSet<string> FetchDetail { get; } = new HashSet<string>();
+        public List<string> FetchDetail { get; } = new List<string>();
 
         [JsonProperty(Order = 120)]
-        public HashSet<string> Merge { get; } = new HashSet<string>();
+        public List<string> Merge { get; } = new List<string>();
 
         public bool ShouldSerializeFetchDetail() => FetchDetail.Count > 0;
         public bool ShouldSerializeMerge() => Merge.Count > 0;

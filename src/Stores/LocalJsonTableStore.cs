@@ -91,8 +91,8 @@ namespace GiantBombDataTool.Stores
                     {
                         if (existingEntity.Timestamp > nextEntity.Timestamp)
                         {
-                            Console.WriteLine($"Found existing entity '{existingEntity.Id}' in {table} with later timestamp '{existingEntity.Timestamp}' than incoming timestamp '{nextEntity.Timestamp}'");
-                            return false;
+                            Console.WriteLine($"Skipping merge of '{nextEntity.Id}' in {table} since incoming timestamp '{nextEntity.Timestamp}' is earlier than existing timestamp '{existingEntity.Timestamp}'");
+                            continue;
                         }
 
                         existingEntity = existingEntitiesEnum.MoveNext() ? existingEntitiesEnum.Current : null;

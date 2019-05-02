@@ -149,9 +149,15 @@ namespace GiantBombDataTool
                     metadata.LastId = enumerator.LastId;
 
                     if (config.DetailFields.Count > 0 && config.Detail != DetailBehavior.Skip)
+                    {
+                        metadata.FetchDetail.Remove(chunk); // in case we have same chunk as previously downloaded
                         metadata.FetchDetail.Add(chunk);
+                    }
                     else
+                    {
+                        metadata.Merge.Remove(chunk); // in case we have same chunk as previously downloaded
                         metadata.Merge.Add(chunk);
+                    }
 
                     _context.LocalStore.SaveStagingMetadata(table, metadata);
 
@@ -173,7 +179,7 @@ namespace GiantBombDataTool
 
             while (metadata.FetchDetail.Count > 0)
             {
-                var chunk = metadata.FetchDetail.First();
+                var chunk = metadata.FetchDetail[0];
 
                 var entities = GetDetailForEntities(
                     table,
@@ -184,6 +190,7 @@ namespace GiantBombDataTool
                 var detailChunk = _context.LocalStore.WriteStagedEntities(table, entities, detailForChunk: chunk);
                 if (detailChunk != null)
                 {
+                    metadata.Merge.Remove(detailChunk);
                     metadata.Merge.Add(detailChunk);
                     Console.WriteLine($"Wrote {detailChunk} to staging");
                 }
@@ -212,6 +219,7 @@ namespace GiantBombDataTool
                         continue;
 
                     metadata.DetailLastId = enumerator.LastId;
+                    metadata.Merge.Remove(chunk);
                     metadata.Merge.Add(chunk);
                     _context.LocalStore.SaveStagingMetadata(table, metadata);
 
@@ -316,7 +324,7 @@ namespace GiantBombDataTool
         {
             while (stagingMetadata.Merge.Count > 0)
             {
-                var chunk = stagingMetadata.Merge.First();
+                var chunk = stagingMetadata.Merge[0];
 
                 Console.Write($"Merging {table} from {chunk}... ");
 

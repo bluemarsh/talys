@@ -74,4 +74,15 @@ namespace GiantBombDataTool
 
         public IDictionary<string, JToken> Properties => Content;
     }
+
+    [Serializable]
+    public class TableStoreException : Exception
+    {
+        public TableStoreException() { }
+        public TableStoreException(string message) : base(message) { }
+        public TableStoreException(string message, Exception inner) : base(message, inner) { }
+        protected TableStoreException(
+          System.Runtime.Serialization.SerializationInfo info,
+          System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
+    }
 }
