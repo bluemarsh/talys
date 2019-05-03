@@ -22,7 +22,10 @@ namespace GiantBombDataTool.Stores
 
     public sealed class LocalJsonTableStore : ITableStore, ITableMetadataStore, ITableStagingStore
     {
-        private static readonly Encoding _encoding = Encoding.UTF8;
+        private static readonly Encoding _readEncoding = Encoding.UTF8;
+        private static readonly Encoding _writeEncoding = new UTF8Encoding(
+            encoderShouldEmitUTF8Identifier: false,
+            throwOnInvalidBytes: true);
 
         private static readonly JsonSerializerSettings _metadataSettings = new JsonSerializerSettings
         {
@@ -282,7 +285,7 @@ namespace GiantBombDataTool.Stores
             if (compression == TableCompressionKind.GZip)
                 stream = new GZipStream(stream, CompressionMode.Decompress);
 
-            return new StreamReader(stream, _encoding);
+            return new StreamReader(stream, _readEncoding);
         }
 
         private StreamWriter CreateStreamWriter(string path, TableCompressionKind? compression = null)
@@ -292,7 +295,7 @@ namespace GiantBombDataTool.Stores
             if (compression == TableCompressionKind.GZip)
                 stream = new GZipStream(stream, CompressionMode.Compress);
 
-            return new StreamWriter(stream, _encoding);
+            return new StreamWriter(stream, _writeEncoding);
         }
 
         private string GetTablePath(string table, TableCompressionKind? compression)
