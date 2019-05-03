@@ -54,6 +54,9 @@ namespace GiantBombDataTool
         public Dictionary<string, TableConfig> Tables { get; } = new Dictionary<string, TableConfig>();
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public int? FetchLimit { get; set; }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public bool? Verbose { get; set; }
 
         public bool ShouldSerializeTables() => Tables.Count > 0;

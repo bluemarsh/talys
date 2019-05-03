@@ -26,6 +26,9 @@ namespace GiantBombDataTool
         [Option("detail", HelpText = "Fetch detail behavior.")]
         public DetailBehavior? Detail { get; set; }
 
+        [Option("fetch-limit", HelpText = "Limit number of entities to fetch per resource.")]
+        public int? FetchLimit { get; set; }
+
         [Option("verbose", HelpText = "Enable verbose tracing output")]
         public bool Verbose { get; set; }
 
@@ -65,6 +68,9 @@ namespace GiantBombDataTool
 
             if (Detail != null)
                 config.Detail = Detail;
+
+            if (FetchLimit != null)
+                config.FetchLimit = FetchLimit;
 
             if (Verbose)
                 config.Verbose = true;

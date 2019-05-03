@@ -138,6 +138,9 @@ namespace GiantBombDataTool
                 metadata.LastTimestamp,
                 metadata.LastId);
 
+            if (_context.Config.FetchLimit != null)
+                entities = entities.Take(_context.Config.FetchLimit.Value);
+
             using var enumerator = new EntityEnumerator(entities);
             bool first = true;
             while (!enumerator.Finished)
