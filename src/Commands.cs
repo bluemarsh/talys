@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -29,6 +30,9 @@ namespace GiantBombDataTool
         [Option("fetch-limit", HelpText = "Limit number of entities to fetch per resource.")]
         public int? FetchLimit { get; set; }
 
+        [Option("fetch-ids", HelpText = "Fetch specific resources by id.")]
+        public string? FetchIds { get; set; }
+
         [Option("verbose", HelpText = "Enable verbose tracing output")]
         public bool Verbose { get; set; }
 
@@ -42,7 +46,11 @@ namespace GiantBombDataTool
             var tables = Tables == "*" ? Array.Empty<string>() :
                 Tables.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToArray();
 
-            var config = GetConfig();
+            if (!TryGetConfig(out var config))
+            {
+                flowContext = null!;
+                return false;
+            }
 
             var remoteStore = CreateGiantBombStore(config);
 
@@ -52,12 +60,12 @@ namespace GiantBombDataTool
             return true;
         }
 
-        private Config GetConfig()
+        private bool TryGetConfig(out Config config)
         {
-            var config = JsonConvert.DeserializeObject<Config>(
+            config = JsonConvert.DeserializeObject<Config>(
                 GetType().GetManifestResourceString("config.json"));
 
-            if (!string.IsNullOrEmpty(ApiKey))
+            if (!string.IsNullOrWhiteSpace(ApiKey))
                 config.ApiKey = ApiKey;
 
             if (Compression != null)
@@ -72,13 +80,37 @@ namespace GiantBombDataTool
             if (FetchLimit != null)
                 config.FetchLimit = FetchLimit;
 
+            if (!string.IsNullOrWhiteSpace(FetchIds))
+            {
+                if (Detail != null)
+                {
+                    Console.WriteLine("--fetch-ids cannot be used with --detail");
+                    return false;
+                }
+
+                bool invalid = false;
+                config.FetchIds = FetchIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s =>
+                {
+                    if (!long.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out long id))
+                    {
+                        Console.WriteLine($"Invalid id: {s}");
+                        invalid = true;
+                        return -1;
+                    }
+                    return id;
+                }).ToList();
+
+                if (invalid)
+                    return false;
+            }
+
             if (Verbose)
                 config.Verbose = true;
 
             foreach (var tableConfig in config.Tables.Values)
                 tableConfig.OverrideWith(config);
 
-            return config;
+            return true;
         }
 
         private IReadOnlyTableStore CreateGiantBombStore(Config config)

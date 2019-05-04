@@ -11,6 +11,7 @@ namespace GiantBombDataTool
             TableConfig config,
             DateTime? lastTimestamp,
             long? lastId);
+        TableEntity GetEntityDetail(string table, TableConfig config, long id);
         TableEntity GetEntityDetail(string table, TableConfig config, TableEntity entity);
     }
 

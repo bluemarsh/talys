@@ -107,6 +107,7 @@
       ]
     },
     "games": {
+      "id": 3030,
       "fields": [
         "aliases",
         "api_detail_url",

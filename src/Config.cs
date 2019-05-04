@@ -57,6 +57,9 @@ namespace GiantBombDataTool
         public int? FetchLimit { get; set; }
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public IReadOnlyList<long>? FetchIds { get; set; }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public bool? Verbose { get; set; }
 
         public bool ShouldSerializeTables() => Tables.Count > 0;
@@ -64,6 +67,10 @@ namespace GiantBombDataTool
 
     public class TableConfig : CommonConfig
     {
+        public long Id { get; set; }
+
+        public string? DetailName { get; set; }
+
         public IReadOnlyList<string> Fields { get; set; } = Array.Empty<string>();
 
         public IReadOnlyList<string> DetailFields { get; set; } = Array.Empty<string>();

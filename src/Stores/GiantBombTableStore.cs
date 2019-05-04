@@ -29,8 +29,7 @@ namespace GiantBombDataTool.Stores
             DateTime? lastTimestamp,
             long? lastId)
         {
-            if (string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(config.ApiKey))
-                _apiKey = config.ApiKey;
+            SetApiKeyIfNeeded(config);
 
             bool finished = false;
 
@@ -46,13 +45,15 @@ namespace GiantBombDataTool.Stores
                 // than limit and ensure that the first item of next page matches the last item of the previous page
                 // (this must also affect staging chunk file naming in local store -- since two files would have same timestamp)
 
-                var result = DownloadResourceList(
+                var uri = BuildListUri(
                     table,
                     string.Join(",", config.Fields),
                     sort: "date_last_updated:asc",
                     dateLastUpdated: lastTimestamp);
+                var result = Download(uri);
 
-                finished = result["number_of_page_results"].Value<long>() == result["number_of_total_results"].Value<long>();
+                finished = result["number_of_page_results"].Value<long>() ==
+                    result["number_of_total_results"].Value<long>();
 
                 foreach (var item in result["results"])
                 {
@@ -70,23 +71,39 @@ namespace GiantBombDataTool.Stores
             }
         }
 
+        public TableEntity GetEntityDetail(string table, TableConfig config, long id)
+        {
+            string url = $"https://www.giantbomb.com/api/{config.DetailName ?? table.Substring(0, table.Length - 1)}/{config.Id}-{id}/";
+            return GetEntityDetailCore(table, config, url);
+        }
+
         public TableEntity GetEntityDetail(string table, TableConfig config, TableEntity entity)
         {
-            if (string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(config.ApiKey))
-                _apiKey = config.ApiKey;
-
             string url = entity.Content["api_detail_url"].Value<string>();
+            return GetEntityDetailCore(table, config, url);
+        }
+
+        private TableEntity GetEntityDetailCore(string table, TableConfig config, string url)
+        {
+            SetApiKeyIfNeeded(config);
 
             Console.WriteLine($"Retrieving {url}");
 
-            var result = DownloadResourceDetail(
+            var fullUri = BuildDetailUri(
                 url,
                 string.Join(",", config.Fields.Concat(config.DetailFields)));
+            var result = Download(fullUri);
             var detail = (JObject)result["results"];
 
             var (id, timestamp) = ParseEntityProperties(detail);
 
             return new TableEntity(id, timestamp, detail);
+        }
+
+        private void SetApiKeyIfNeeded(TableConfig config)
+        {
+            if (string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(config.ApiKey))
+                _apiKey = config.ApiKey;
         }
 
         private static (long Id, DateTime Timestamp) ParseEntityProperties(JToken item)
@@ -99,25 +116,49 @@ namespace GiantBombDataTool.Stores
             return (id, timestamp);
         }
 
-        private JObject DownloadResourceList(
+        private Uri BuildListUri(
             string resource,
             string fields,
             long offset = 0,
             long? limit = null,
             string? sort = null,
+            string? filter = null,
             DateTime? dateLastUpdated = null)
         {
-            var uri = BuildListUri(resource, fields, offset, limit, sort, dateLastUpdated);
-            return DownloadCore(uri);
+            sort ??= "date_last_updated:desc";
+            string s = $"http://www.giantbomb.com/api/{resource}/?api_key={_apiKey}&format=json&sort={sort}";
+
+            if (fields != null)
+                s += $"&field_list={fields}";
+
+            if (offset > 0)
+                s += $"&offset={offset}";
+
+            if (limit != null)
+                s += $"&limit={limit}";
+
+            if (dateLastUpdated != null)
+            {
+                if (filter != null)
+                    filter += ',';
+                filter += $"date_last_updated:{dateLastUpdated:yyyy-MM-dd HH:mm:ss}|{DateTime.UtcNow.AddYears(1):yyyy-MM-dd HH:mm:ss}";
+            }
+
+            if (filter != null)
+                s += $"&filter={filter}";
+
+            return new Uri(s);
         }
 
-        private JObject DownloadResourceDetail(string url, string fields)
+        private Uri BuildDetailUri(string url, string fields)
         {
-            var uri = BuildDetailUri(url, fields);
-            return DownloadCore(uri);
+            string s = $"{url}?api_key={_apiKey}&format=json";
+            if (fields != null)
+                s += $"&field_list={fields}";
+            return new Uri(s);
         }
 
-        private JObject DownloadCore(Uri uri)
+        private JObject Download(Uri uri)
         {
             const int MaxRetries = 3;
 
@@ -155,36 +196,6 @@ namespace GiantBombDataTool.Stores
             if (DateTime.UtcNow < _nextRequest)
                 Thread.Sleep(_nextRequest - DateTime.UtcNow);
             _nextRequest = DateTime.UtcNow + TimeSpan.FromMilliseconds(1001);
-        }
-
-        private Uri BuildListUri(
-            string resource,
-            string fields,
-            long offset,
-            long? limit,
-            string? sort,
-            DateTime? dateLastUpdated)
-        {
-            sort ??= "date_last_updated:desc";
-            string s = $"http://www.giantbomb.com/api/{resource}/?api_key={_apiKey}&format=json&sort={sort}";
-
-            if (fields != null)
-                s += $"&field_list={fields}";
-            if (offset > 0)
-                s += $"&offset={offset}";
-            if (limit != null)
-                s += $"&limit={limit}";
-            if (dateLastUpdated != null)
-                s += $"&filter=date_last_updated:{dateLastUpdated:yyyy-MM-dd HH:mm:ss}|{DateTime.UtcNow.AddYears(1):yyyy-MM-dd HH:mm:ss}";
-            return new Uri(s);
-        }
-
-        private Uri BuildDetailUri(string url, string fields)
-        {
-            string s = $"{url}?api_key={_apiKey}&format=json";
-            if (fields != null)
-                s += $"&field_list={fields}";
-            return new Uri(s);
         }
 
         private class InternalWebClient : WebClient

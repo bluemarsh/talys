@@ -112,7 +112,7 @@ namespace GiantBombDataTool
                     };
                 }
 
-                if (!TryFetchEntities(table, tableMetadata.Config, stagingMetadata))
+                if (_context.Config.FetchIds == null && !TryFetchEntities(table, tableMetadata.Config, stagingMetadata))
                     return false;
 
                 if (!TryFetchDetail(table, tableMetadata, stagingMetadata))
@@ -203,12 +203,14 @@ namespace GiantBombDataTool
                 _context.LocalStore.RemoveStagedEntities(chunk);
             }
 
-            if (config.Detail == DetailBehavior.Backfill)
+            if (_context.Config.FetchIds != null || config.Detail == DetailBehavior.Backfill)
             {
-                var entities = GetDetailForEntities(
-                    table,
-                    config,
-                    GetEntitiesToBackfillDetail(table, tableMetadata, metadata.DetailLastId));
+                var entities = _context.Config.FetchIds != null ?
+                    _context.Config.FetchIds.Select(id => _context.RemoteStore.GetEntityDetail(table, config, id)) :
+                    GetDetailForEntities(
+                        table,
+                        config,
+                        GetEntitiesToBackfillDetail(table, tableMetadata, metadata.DetailLastId));
 
                 using var enumerator = new EntityEnumerator(entities);
                 while (!enumerator.Finished)
@@ -221,7 +223,9 @@ namespace GiantBombDataTool
                     if (chunk == null)
                         continue;
 
-                    metadata.DetailLastId = enumerator.LastId;
+                    if (config.Detail == DetailBehavior.Backfill)
+                        metadata.DetailLastId = enumerator.LastId;
+
                     metadata.Merge.Remove(chunk);
                     metadata.Merge.Add(chunk);
                     _context.LocalStore.SaveStagingMetadata(table, metadata);
