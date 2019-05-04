@@ -32,8 +32,48 @@ namespace GiantBombDataTool
         }
     }
 
+    public abstract class Flow
+    {
+        protected sealed class EntityEnumerator : IEnumerable<TableEntity>, IDisposable
+        {
+            private readonly IEnumerator<TableEntity> _entities;
+
+            internal EntityEnumerator(IEnumerable<TableEntity> entities)
+            {
+                _entities = entities.GetEnumerator();
+            }
+
+            internal long LastId { get; private set; }
+            internal DateTime LastTimestamp { get; private set; }
+            internal bool Finished { get; private set; }
+
+            public void Dispose()
+            {
+                _entities.Dispose();
+            }
+
+            public IEnumerator<TableEntity> GetEnumerator()
+            {
+                while (_entities.MoveNext())
+                {
+                    var entity = _entities.Current;
+                    LastId = entity.Id;
+                    LastTimestamp = entity.Timestamp;
+                    yield return entity;
+                }
+                Finished = true;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+    }
+
     public sealed class CloneFlow
     {
+        // TODO: move to base Flow class
         private readonly FlowContext _context;
 
         public CloneFlow(FlowContext context)
@@ -76,7 +116,7 @@ namespace GiantBombDataTool
         }
     }
 
-    public sealed class FetchFlow
+    public sealed class FetchFlow : Flow
     {
         private readonly FlowContext _context;
 
@@ -256,45 +296,9 @@ namespace GiantBombDataTool
                     yield return entity;
             }
         }
-
-        private sealed class EntityEnumerator : IEnumerable<TableEntity>, IDisposable
-        {
-            private readonly IEnumerator<TableEntity> _entities;
-
-            internal EntityEnumerator(IEnumerable<TableEntity> entities)
-            {
-                _entities = entities.GetEnumerator();
-            }
-
-            internal long LastId { get; private set; }
-            internal DateTime LastTimestamp { get; private set; }
-            internal bool Finished { get; private set; }
-
-            public void Dispose()
-            {
-                _entities.Dispose();
-            }
-
-            public IEnumerator<TableEntity> GetEnumerator()
-            {
-                while (_entities.MoveNext())
-                {
-                    var entity = _entities.Current;
-                    LastId = entity.Id;
-                    LastTimestamp = entity.Timestamp;
-                    yield return entity;
-                }
-                Finished = true;
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-        }
     }
 
-    public sealed class MergeFlow
+    public sealed class MergeFlow : Flow
     {
         private readonly FlowContext _context;
 
@@ -329,6 +333,20 @@ namespace GiantBombDataTool
 
         private bool TryMergeEntities(string table, Metadata tableMetadata, StagingMetadata stagingMetadata)
         {
+            const int batchSize = 10000;
+
+            var entities = ReadEntitiesToMerge(table, tableMetadata, stagingMetadata);
+            using var enumerator = new EntityEnumerator(entities);
+            while (!enumerator.Finished)
+            {
+                if (!_context.LocalStore.TryUpsertEntities(table, tableMetadata, enumerator.Take(batchSize)))
+                    return false;
+            }
+            return true;
+        }
+
+        private IEnumerable<TableEntity> ReadEntitiesToMerge(string table, Metadata tableMetadata, StagingMetadata stagingMetadata)
+        {
             while (stagingMetadata.Merge.Count > 0)
             {
                 var chunk = stagingMetadata.Merge[0];
@@ -336,8 +354,8 @@ namespace GiantBombDataTool
                 Console.Write($"Merging {table} from {chunk}... ");
 
                 var entities = _context.LocalStore.ReadStagedEntities(chunk);
-                if (!_context.LocalStore.TryUpsertEntities(table, tableMetadata, entities))
-                    return false;
+                foreach (var entity in entities)
+                    yield return entity;
 
                 stagingMetadata.Merge.Remove(chunk);
                 if (stagingMetadata.Merge.Count > 0)
@@ -354,7 +372,6 @@ namespace GiantBombDataTool
 
                 _context.LocalStore.RemoveStagedEntities(chunk);
             }
-            return true;
         }
     }
 

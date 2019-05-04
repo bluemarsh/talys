@@ -54,6 +54,8 @@ namespace GiantBombDataTool
         {
             content[IdProperty] = id;
             content[TimestampProperty] = timestamp;
+            Id = id;
+            Timestamp = timestamp;
             Content = content;
         }
 
@@ -62,15 +64,13 @@ namespace GiantBombDataTool
             if (content[IdProperty] == null || content[TimestampProperty] == null)
                 throw new ArgumentException("Missing id or timestamp in content.");
 
+            Id = content[IdProperty].Value<long>();
+            Timestamp = content[TimestampProperty].Value<DateTime>();
             Content = content;
         }
 
-        // TODO: Consider shredding content into Dictionary<string, object> Properties
-        // and using System.Text.Json.JsonElement for non-primitive property values
-        // Would need to implement extension method for writing JsonElement to a Utf8JsonWriter
-
-        public long Id => Content[IdProperty].Value<long>();
-        public DateTime Timestamp => Content[TimestampProperty].Value<DateTime>();
+        public long Id { get; }
+        public DateTime Timestamp { get; }
         public JObject Content { get; }
 
         public IDictionary<string, JToken> Properties => Content;
