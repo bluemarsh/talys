@@ -69,6 +69,7 @@ namespace GiantBombDataTool
     {
         public long Id { get; set; }
 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string? DetailName { get; set; }
 
         public IReadOnlyList<string> Fields { get; set; } = Array.Empty<string>();
