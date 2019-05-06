@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
-using GiantBombDataTool.Stores;
+using Talys.Stores;
 
-namespace GiantBombDataTool
+namespace Talys
 {
     public sealed class FlowContext
     {

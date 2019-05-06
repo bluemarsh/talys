@@ -9,7 +9,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace GiantBombDataTool.Stores
+namespace Talys.Stores
 {
     public enum TableCompressionKind
     {

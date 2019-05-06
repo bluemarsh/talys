@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using CommandLine;
 
-namespace GiantBombDataTool
+namespace Talys
 {
     public static class Program
     {

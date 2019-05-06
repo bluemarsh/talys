@@ -5,10 +5,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using CommandLine;
-using GiantBombDataTool.Stores;
+using Talys.Stores;
 using Newtonsoft.Json;
 
-namespace GiantBombDataTool
+namespace Talys
 {
     internal abstract class Command
     {
@@ -62,8 +62,8 @@ namespace GiantBombDataTool
 
         private bool TryGetConfig(out Config config)
         {
-            config = JsonConvert.DeserializeObject<Config>(
-                GetType().GetManifestResourceString("config.json"));
+            using (var configReader = new StreamReader(GetType().Assembly.GetManifestResourceStream("talys.config.json")))
+                config = JsonConvert.DeserializeObject<Config>(configReader.ReadToEnd());
 
             if (!string.IsNullOrWhiteSpace(ApiKey))
                 config.ApiKey = ApiKey;

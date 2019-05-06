@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace GiantBombDataTool
+namespace Talys
 {
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public abstract class CommonMetadata

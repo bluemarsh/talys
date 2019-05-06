@@ -7,7 +7,7 @@ using System.Net;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 
-namespace GiantBombDataTool.Stores
+namespace Talys.Stores
 {
     public sealed class GiantBombTableStore : IReadOnlyTableStore
     {

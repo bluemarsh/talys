@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using GiantBombDataTool.Stores;
+using Talys.Stores;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
-namespace GiantBombDataTool
+namespace Talys
 {
     public enum DetailBehavior
     {

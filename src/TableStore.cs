@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace GiantBombDataTool
+namespace Talys
 {
     public interface IReadOnlyTableStore
     {
