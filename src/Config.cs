@@ -35,7 +35,7 @@ namespace Talys
 
         public void OverrideWith(CommonConfig other)
         {
-            if (other.ApiKey != null)
+            if (!string.IsNullOrWhiteSpace(other.ApiKey))
                 ApiKey = other.ApiKey;
 
             if (other.Compression != null)

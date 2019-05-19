@@ -50,6 +50,7 @@ namespace Talys
                 tables = _context.Config.Tables.Keys;
 
             // TODO: create all table metadata upfront, so that subsequent "pull" will complete interrupted clone
+            // separate the init code here into an "init" command ("clone" is just init + pull)
             foreach (string table in tables)
             {
                 if (!_context.Config.Tables.TryGetValue(table, out var tableConfig))

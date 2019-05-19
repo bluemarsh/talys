@@ -48,12 +48,15 @@ namespace Talys.Stores
                 var uri = BuildListUri(
                     table,
                     string.Join(",", config.Fields),
+                    limit: 100,
                     sort: "date_last_updated:asc",
                     dateLastUpdated: lastTimestamp);
                 var result = Download(uri);
 
                 finished = result["number_of_page_results"].Value<long>() ==
                     result["number_of_total_results"].Value<long>();
+
+                DateTime? firstTimestamp = null;
 
                 foreach (var item in result["results"])
                 {
@@ -64,9 +67,59 @@ namespace Talys.Stores
                     if (id == lastId && timestamp == lastTimestamp)
                         continue; // don't add the last item again
 
+                    if (firstTimestamp == null)
+                        firstTimestamp = timestamp;
+
                     lastId = id;
                     lastTimestamp = timestamp;
                     yield return new TableEntity(id, timestamp, (JObject)item);
+                }
+
+                long offset = 0;
+                while (firstTimestamp == lastTimestamp)
+                {
+                    // TODO: figure out how to avoid duplicating code from above
+
+                    offset += 99;
+                    //offset += 98; // 99 offset was acting like 100 when hit this for "people" table...
+
+                    uri = BuildListUri(
+                        table,
+                        string.Join(",", config.Fields),
+                        offset,
+                        limit: 100,
+                        sort: "date_last_updated:asc",
+                        dateLastUpdated: lastTimestamp);
+                    result = Download(uri);
+
+                    finished = result["number_of_page_results"].Value<long>() ==
+                        result["number_of_total_results"].Value<long>();
+
+                    firstTimestamp = null;
+
+                    foreach (var item in result["results"])
+                    {
+                        var (id, timestamp) = ParseEntityProperties(item);
+
+                        // First item should overlap with last item from previous download
+                        if (id == lastId && timestamp == lastTimestamp)
+                        {
+                            continue; // don't add the last item again
+                        }
+                        else if (firstTimestamp == null)
+                        {
+                            // If needed, make this more robust to handle multiple ids and use lower offset
+                            Console.WriteLine($"Expecting {lastId} but found {id}");
+                            yield break;
+                        }
+
+                        if (firstTimestamp == null)
+                            firstTimestamp = timestamp;
+
+                        lastId = id;
+                        lastTimestamp = timestamp;
+                        yield return new TableEntity(id, timestamp, (JObject)item);
+                    }
                 }
             }
         }

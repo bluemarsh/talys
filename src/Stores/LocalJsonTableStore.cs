@@ -318,7 +318,7 @@ namespace Talys.Stores
             string chunk = 
                 detailForChunk != null ?  Path.ChangeExtension(detailForChunk, ".detail.jsonl") :
                 detailChunkById ? $"{table}.{id}.detail.jsonl" :
-                $"{table}.{timestamp:yyyyMMddHHmmss}.jsonl";
+                $"{table}.{timestamp:yyyyMMddHHmmss}.{id}.jsonl";
 
             return GetTableStagingPath(chunk);
         }
