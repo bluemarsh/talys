@@ -186,6 +186,39 @@
         "site_detail_url"
       ]
     },
+    "objects": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "first_appeared_in_game",
+        "id",
+        "image",
+        "name",
+        "site_detail_url"
+      ]
+    },
+    "people": {
+      "fields": [
+        "aliases",
+        "api_detail_url",
+        "birth_date",
+        "country",
+        "date_added",
+        "date_last_updated",
+        "death_date",
+        "deck",
+        "first_credited_game",
+        "gender",
+        "hometown",
+        "id",
+        "image",
+        "name",
+        "site_detail_url"
+      ]
+    },
     "platforms": {
       "fields": [
         "abbreviation",
@@ -203,6 +236,31 @@
         "online_support",
         "original_price",
         "release_date",
+        "site_detail_url"
+      ]
+    },
+    "rating_boards": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "id",
+        "image",
+        "name",
+        "site_detail_url"
+      ]
+    },
+    "regions": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        "description",
+        "id",
+        "image",
+        "name",
         "site_detail_url"
       ]
     },
@@ -235,6 +293,42 @@
         "sound_systems",
         "site_detail_url",
         "widescreen_support"
+      ]
+    },
+    "reviews": {
+      "fields": [
+        "api_detail_url",
+        "deck",
+        //"description",
+        "dlc_name",
+        "game",
+        "publish_date",
+        "release",
+        "reviewer",
+        "score",
+        "site_detail_url"
+      ]
+    },
+    // no updated field, need special handling
+    //"themes": {
+    //  "fields": [
+    //    "api_detail_url",
+    //    "id",
+    //    "name",
+    //    "site_detail_url"
+    //  ]
+    //}
+    "user_reviews": {
+      "fields": [
+        "api_detail_url",
+        "date_added",
+        "date_last_updated",
+        "deck",
+        //"description",
+        "game",
+        "reviewer",
+        "score",
+        "site_detail_url"
       ]
     }
   }
