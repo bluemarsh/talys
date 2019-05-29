@@ -219,6 +219,7 @@
         "site_detail_url"
       ]
     },
+    /*GiantBomb:
     "platforms": {
       "fields": [
         "abbreviation",
@@ -237,6 +238,24 @@
         "original_price",
         "release_date",
         "site_detail_url"
+      ]
+    },*/
+    "platforms": {
+      "fields": [
+        "id",
+        "abbreviation",
+        "alternative_name",
+        "category",
+        "created_at",
+        "generation",
+        "name",
+        "platform_logo.*",
+        "product_family.*",
+        "slug",
+        "updated_at",
+        "url",
+        //"versions.*",
+        "websites.*"
       ]
     },
     "rating_boards": {

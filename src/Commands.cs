@@ -116,7 +116,8 @@ namespace Talys
         private IReadOnlyTableStore CreateGiantBombStore(Config config)
         {
             string userAgent = CommandLine.Text.HeadingInfo.Default.ToString();
-            return new GiantBombTableStore(userAgent, config.ApiKey, config.Verbose ?? false);
+            //return new GiantBombTableStore(userAgent, config.ApiKey, config.Verbose ?? false);
+            return new IgdbTableStore(userAgent, config.ApiKey, config.Verbose ?? false);
         }
     }
 
