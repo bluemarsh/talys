@@ -45,12 +45,12 @@ namespace Talys.Stores
                 // than limit and ensure that the first item of next page matches the last item of the previous page
                 // (this must also affect staging chunk file naming in local store -- since two files would have same timestamp)
 
-                var uri = BuildListUri(
-                    table,
+                var uri = BuildListUri(table);
+                var request = BuildListQuery(
                     string.Join(",", config.Fields),
                     limit: limit,
                     dateLastUpdated: lastTimestamp);
-                var result = Download(uri);
+                var result = Download(uri, request);
 
                 finished = result.Count <= limit;
 
@@ -81,13 +81,13 @@ namespace Talys.Stores
                     offset += 99;
                     //offset += 98; // 99 offset was acting like 100 when hit this for "people" table...
 
-                    uri = BuildListUri(
-                        table,
+                    uri = BuildListUri(table);
+                    request = BuildListQuery(
                         string.Join(",", config.Fields),
                         offset,
                         limit: limit,
                         dateLastUpdated: lastTimestamp);
-                    result = Download(uri);
+                    result = Download(uri, request);
 
                     finished = result.Count <= limit;
 
@@ -143,54 +143,37 @@ namespace Talys.Stores
             return (id, timestamp);
         }
 
-        private Uri BuildListUri(
-            string resource,
-            string fields,
-            long offset = 0,
-            long? limit = null,
-            string? sort = null,
-            DateTime? dateLastUpdated = null)
+        private Uri BuildListUri(string resource)
         {
-            sort ??= "updated_at:asc";
-            string s = $"https://api-v3.igdb.com/{resource}/?order={sort}";
-
-            s += $"&fields={fields}";
-
-            if (offset > 0)
-                s += $"&offset={offset}";
-
-            if (limit != null)
-                s += $"&limit={limit}";
-
-            if (dateLastUpdated != null)
-                s += $"&filter[updated_at][gte]={dateLastUpdated.Value.Subtract(DateTime.UnixEpoch).TotalSeconds}";
-
+            string s = $"https://api-v3.igdb.com/{resource}/";
             return new Uri(s);
         }
 
-        /*private string BuildListQuery(
+        private string BuildListQuery(
             string fields,
             long offset = 0,
             long? limit = null,
             string? sort = null,
             DateTime? dateLastUpdated = null)
         {
-            sort ??= "updated_at:asc";
-            string s = $"https://api-v3.igdb.com/{resource}/?order={sort}";
-
-            s += $"&fields={fields}";
+            string s = $"fields {fields}; ";
 
             if (offset > 0)
-                s += $"&offset={offset}";
+                s += $"offset {offset}; ";
 
             if (limit != null)
-                s += $"&limit={limit}";
+                s += $"limit {limit}; ";
+
+            sort ??= "updated_at asc";
+            s += $"sort {sort}; ";
 
             if (dateLastUpdated != null)
-                s += $"&filter[updated_at][gte]={dateLastUpdated.Value.Subtract(DateTime.UnixEpoch).TotalSeconds}";
-        }*/
+                s += $"where updated_at >= {dateLastUpdated.Value.Subtract(DateTime.UnixEpoch).TotalSeconds}; ";
 
-        private (JArray Items, long Count) Download(Uri uri)
+            return s;
+        }
+
+        private (JArray Items, long Count) Download(Uri uri, string requestBody)
         {
             const int MaxRetries = 3;
 
@@ -205,7 +188,7 @@ namespace Talys.Stores
             {
                 try
                 {
-                    json = _webClient.DownloadString(uri);
+                    json = _webClient.UploadString(uri, requestBody);
                     count = Convert.ToInt64(_webClient.ResponseHeaders["X-Count"], CultureInfo.InvariantCulture);
                     break;
                 }
