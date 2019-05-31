@@ -249,13 +249,18 @@
         "created_at",
         "generation",
         "name",
-        "platform_logo.*",
+        //"platform_logo.*",
+        //"platform_logo.url",
+        "platform_logo",
         "product_family.*",
+        //"product_family",
         "slug",
         "updated_at",
         "url",
         //"versions.*",
+        "versions",
         "websites.*"
+        //"websites"
       ]
     },
     "rating_boards": {
