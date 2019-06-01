@@ -33,10 +33,12 @@ namespace Talys.Stores
         };
 
         private readonly string _storePath;
+        private readonly string _storeInternalPath;
 
         public LocalJsonTableStore(string storePath)
         {
             _storePath = storePath;
+            _storeInternalPath = Path.Combine(storePath, ".talys");
         }
 
         public object Location => _storePath;
@@ -134,13 +136,13 @@ namespace Talys.Stores
 
         public IEnumerable<string> GetTables()
         {
-            foreach (var metadataFileName in Directory.EnumerateFiles(_storePath, "*.metadata.json"))
+            foreach (var metadataFileName in Directory.EnumerateFiles(_storeInternalPath, "*.metadata.json"))
                 yield return Path.GetFileName(metadataFileName).Split('.')[0];
         }
 
         public bool TryInitialize(string table, Metadata metadata)
         {
-            Directory.CreateDirectory(_storePath);
+            Directory.CreateDirectory(_storeInternalPath);
 
             string metadataPath = GetMetadataPath(table);
 
@@ -300,7 +302,7 @@ namespace Talys.Stores
 
         private string GetTempTablePath(string table, TableCompressionKind? compression)
         {
-            return Path.Combine(_storePath, $"{table}.temp.jsonl") + GetCompressionSuffix(compression);
+            return Path.Combine(_storeInternalPath, $"{table}.temp.jsonl") + GetCompressionSuffix(compression);
         }
 
         private string GetCompressionSuffix(TableCompressionKind? compression)
@@ -323,9 +325,9 @@ namespace Talys.Stores
             return GetTableStagingPath(chunk);
         }
 
-        private string GetMetadataPath(string table) => Path.Combine(_storePath, $"{table}.metadata.json");
-        private string GetStagingMetadataPath(string table) => Path.Combine(_storePath, $"{table}.staging.json");
+        private string GetMetadataPath(string table) => Path.Combine(_storeInternalPath, $"{table}.metadata.json");
+        private string GetStagingMetadataPath(string table) => Path.Combine(_storeInternalPath, $"{table}.staging.json");
         private string GetTableStagingPath(string chunk)
-            => Path.Combine(_storePath, chunk);
+            => Path.Combine(_storeInternalPath, chunk);
     }
 }
