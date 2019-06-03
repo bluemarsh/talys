@@ -110,7 +110,7 @@ namespace Talys
                     stagingMetadata = new StagingMetadata
                     {
                         LastTimestamp = tableMetadata.LastTimestamp,
-                        LastId = tableMetadata.LastId,
+                        LastIds = { tableMetadata.LastIds },
                     };
                 }
 
@@ -138,7 +138,7 @@ namespace Talys
                 table,
                 config,
                 metadata.LastTimestamp,
-                metadata.LastId);
+                metadata.LastIds);
 
             if (_context.Config.FetchLimit != null)
                 entities = entities.Take(_context.Config.FetchLimit.Value);
@@ -151,7 +151,7 @@ namespace Talys
                 if (chunk != null)
                 {
                     metadata.LastTimestamp = enumerator.LastTimestamp;
-                    metadata.LastId = enumerator.LastId;
+                    metadata.LastIds.ReplaceWith(enumerator.LastIds);
 
                     if (config.DetailFields.Count > 0 && config.Detail != DetailBehavior.Skip)
                     {
@@ -267,8 +267,9 @@ namespace Talys
                 _entities = entities.GetEnumerator();
             }
 
-            internal long LastId { get; private set; }
-            internal DateTime LastTimestamp { get; private set; }
+            internal DateTime? LastTimestamp { get; private set; }
+            internal HashSet<long> LastIds { get; } = new HashSet<long>();
+            internal long? LastId { get; private set; }
             internal bool Finished { get; private set; }
 
             public void Dispose()
@@ -281,6 +282,9 @@ namespace Talys
                 while (_entities.MoveNext())
                 {
                     var entity = _entities.Current;
+                    if (entity.Timestamp != LastTimestamp)
+                        LastIds.Clear();
+                    LastIds.Add(entity.Id);
                     LastId = entity.Id;
                     LastTimestamp = entity.Timestamp;
                     yield return entity;
@@ -384,7 +388,7 @@ namespace Talys
                 else
                 {
                     _tableMetadata.LastTimestamp = _stagingMetadata.LastTimestamp;
-                    _tableMetadata.LastId = _stagingMetadata.LastId;
+                    _tableMetadata.LastIds.ReplaceWith(_stagingMetadata.LastIds);
                     _context.LocalStore.SaveMetadata(_table, _tableMetadata);
                     _context.LocalStore.RemoveStagingMetadata(_table);
                 }

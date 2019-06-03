@@ -27,14 +27,12 @@ namespace Talys.Stores
             string table,
             TableConfig config,
             DateTime? lastTimestamp,
-            long? lastId)
+            IEnumerable<long> initialLastIds)
         {
             SetApiKeyIfNeeded(config);
 
             // TODO: support persisting lastIds
-            var lastIds = new HashSet<long>();
-            if (lastId != null)
-                lastIds.Add(lastId.Value);
+            var lastIds = new HashSet<long>(initialLastIds);
 
             bool finished = false;
 
@@ -44,11 +42,6 @@ namespace Talys.Stores
                     lastTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") :
                     "forever";
                 Console.WriteLine($"Retrieving {table} updated since {lastUpdateText}");
-
-                // TODO: we could hit an infinite loop here if there are more items with the same timestamp than the page limit
-                // if this happened, would need to implement paging (with offset) to handle this case -- use offset of one less
-                // than limit and ensure that the first item of next page matches the last item of the previous page
-                // (this must also affect staging chunk file naming in local store -- since two files would have same timestamp)
 
                 var uri = BuildListUri(
                     table,
@@ -87,8 +80,7 @@ namespace Talys.Stores
                 {
                     // TODO: figure out how to avoid duplicating code from above
 
-                    //offset += 99;
-                    offset += 95; // 99 offset was acting like 100 when hit this for "people" table...
+                    offset += 99;
 
                     uri = BuildListUri(
                         table,
@@ -110,17 +102,14 @@ namespace Talys.Stores
 
                         if (timestamp == lastTimestamp && lastIds.Contains(id))
                         {
+                            firstTimestamp = timestamp;
                             continue; // don't add the item again
                         }
                         else if (firstTimestamp == null)
                         {
-                            // If needed, make this more robust to handle multiple ids and use lower offset
                             Console.WriteLine($"Expecting one of {string.Join(",", lastIds)} but found {id}");
                             yield break;
                         }
-
-                        if (firstTimestamp == null)
-                            firstTimestamp = timestamp;
 
                         if (lastTimestamp != timestamp)
                             lastIds.Clear();

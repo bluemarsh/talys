@@ -10,7 +10,7 @@ namespace Talys
             string table,
             TableConfig config,
             DateTime? lastTimestamp,
-            long? lastId);
+            IEnumerable<long> lastIds);
         TableEntity GetEntityDetail(string table, TableConfig config, long id);
         TableEntity GetEntityDetail(string table, TableConfig config, TableEntity entity);
     }

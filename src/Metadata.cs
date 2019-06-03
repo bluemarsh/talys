@@ -11,8 +11,22 @@ namespace Talys
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore, Order = 10)]
         public DateTime? LastTimestamp { get; set; }
 
+        // TODO: included for back compat only (can be removed once all existing metadata has been updated)
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore, Order = 20)]
-        public long? LastId { get; set; }
+        public long? LastId
+        {
+            get { return null; }
+            set
+            {
+                if (value != null)
+                    LastIds.Add(value.Value);
+            }
+        }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore, Order = 20)]
+        public HashSet<long> LastIds { get; } = new HashSet<long>();
+
+        public bool ShouldSerializeLastIds() => LastIds.Count > 0;
     }
 
     public sealed class Metadata : CommonMetadata
@@ -26,7 +40,7 @@ namespace Talys
             {
                 Config = Config.Clone(),
                 LastTimestamp = LastTimestamp,
-                LastId = LastId,
+                LastIds = { LastIds },
             };
         }
     }
