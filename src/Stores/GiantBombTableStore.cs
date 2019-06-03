@@ -31,6 +31,11 @@ namespace Talys.Stores
         {
             SetApiKeyIfNeeded(config);
 
+            // TODO: support persisting lastIds
+            var lastIds = new HashSet<long>();
+            if (lastId != null)
+                lastIds.Add(lastId.Value);
+
             bool finished = false;
 
             while (!finished)
@@ -62,16 +67,18 @@ namespace Talys.Stores
                 {
                     var (id, timestamp) = ParseEntityProperties(item);
 
-                    // TODO: handle multiple ids with the same timestamp (so we don't create staging file
-                    // with only existing content, although it is handled correctly by upsert anyway)
-                    if (id == lastId && timestamp == lastTimestamp)
-                        continue; // don't add the last item again
+                    if (timestamp == lastTimestamp && lastIds.Contains(id))
+                        continue; // don't add the item again
 
                     if (firstTimestamp == null)
                         firstTimestamp = timestamp;
 
-                    lastId = id;
+                    if (lastTimestamp != timestamp)
+                        lastIds.Clear();
+
+                    lastIds.Add(id);
                     lastTimestamp = timestamp;
+
                     yield return new TableEntity(id, timestamp, (JObject)item);
                 }
 
@@ -80,8 +87,8 @@ namespace Talys.Stores
                 {
                     // TODO: figure out how to avoid duplicating code from above
 
-                    offset += 99;
-                    //offset += 98; // 99 offset was acting like 100 when hit this for "people" table...
+                    //offset += 99;
+                    offset += 95; // 99 offset was acting like 100 when hit this for "people" table...
 
                     uri = BuildListUri(
                         table,
@@ -101,23 +108,26 @@ namespace Talys.Stores
                     {
                         var (id, timestamp) = ParseEntityProperties(item);
 
-                        // First item should overlap with last item from previous download
-                        if (id == lastId && timestamp == lastTimestamp)
+                        if (timestamp == lastTimestamp && lastIds.Contains(id))
                         {
-                            continue; // don't add the last item again
+                            continue; // don't add the item again
                         }
                         else if (firstTimestamp == null)
                         {
                             // If needed, make this more robust to handle multiple ids and use lower offset
-                            Console.WriteLine($"Expecting {lastId} but found {id}");
+                            Console.WriteLine($"Expecting one of {string.Join(",", lastIds)} but found {id}");
                             yield break;
                         }
 
                         if (firstTimestamp == null)
                             firstTimestamp = timestamp;
 
-                        lastId = id;
+                        if (lastTimestamp != timestamp)
+                            lastIds.Clear();
+
+                        lastIds.Add(id);
                         lastTimestamp = timestamp;
+
                         yield return new TableEntity(id, timestamp, (JObject)item);
                     }
                 }
