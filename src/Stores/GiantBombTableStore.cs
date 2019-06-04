@@ -102,7 +102,9 @@ namespace Talys.Stores
 
                         if (timestamp == lastTimestamp && lastIds.Contains(id))
                         {
-                            firstTimestamp = timestamp;
+                            if (firstTimestamp == null)
+                                firstTimestamp = timestamp;
+
                             continue; // don't add the item again
                         }
                         else if (firstTimestamp == null)
