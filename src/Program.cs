@@ -22,14 +22,12 @@ namespace Talys
                     typeof(PullCommand),
                     typeof(CompressCommand),
                     typeof(DecompressCommand),
+                    typeof(PartitionCommand),
                 });
 
-            int commandResult = 1;
-            parseResult
-                .WithParsed<Command>(c => commandResult = c.Execute())
-                .WithNotParsed(errors => commandResult = IsHelpOrVersionRequest(errors) ? 0 : 1);
-
-            return commandResult;
+            return parseResult.MapResult<Command, int>(
+                command => command.Execute(),
+                errors => IsHelpOrVersionRequest(errors) ? 0 : 1);
         }
 
         private static bool IsHelpOrVersionRequest(IEnumerable<Error> errors)

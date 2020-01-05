@@ -4,6 +4,7 @@ using Talys.Stores;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using Microsoft.VisualBasic;
 
 namespace Talys
 {
@@ -76,15 +77,22 @@ namespace Talys
 
         public IReadOnlyList<string> DetailFields { get; set; } = Array.Empty<string>();
 
+        public Dictionary<string, IReadOnlyList<string>> ColumnPartitions { get; } = new Dictionary<string, IReadOnlyList<string>>();
+
         public bool ShouldSerializeFields() => Fields.Count > 0;
         public bool ShouldSerializeDetailFields() => DetailFields.Count > 0;
+        public bool ShouldSerializeColumnPartitions() => ColumnPartitions.Count > 0;
 
         public TableConfig Clone()
         {
             var clone = new TableConfig
             {
+                Id = Id,
+                DetailName = DetailName,
                 Fields = Fields,
+                DetailFields = DetailFields,
             };
+            clone.ColumnPartitions.ReplaceWith(ColumnPartitions);
             clone.OverrideWith(this);
             return clone;
         }

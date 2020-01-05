@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Linq;
 using Talys.Stores;
@@ -509,6 +510,41 @@ namespace Talys
                 // with different compression options is safe, but that only is true when
                 // the store is using separate files for each.
             }
+
+            return true;
+        }
+    }
+
+    public sealed class PartitionFlow
+    {
+        private readonly FlowContext _context;
+        private readonly string _table;
+        private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _columnPartitions;
+
+        public PartitionFlow(FlowContext context, string table, IReadOnlyDictionary<string, IReadOnlyList<string>> columnPartitions)
+        {
+            _context = context;
+            _table = table;
+            _columnPartitions = columnPartitions;
+        }
+
+        public bool TryExecute()
+        {
+            // TODO: share code with CompressFlow??
+            if (!_context.LocalStore.TryLoadMetadata(_table, out var tableMetadata))
+                return false;
+
+            Console.WriteLine($"Partitioning {_table}... ");
+
+            var newMetadata = tableMetadata.Clone();
+
+            newMetadata.Config.ColumnPartitions.OverrideWith(_columnPartitions);
+
+            // TODO: consider making this a first class method on ITableStore (CleanEntities?)
+            var entities = _context.LocalStore.ReadEntities(_table, tableMetadata);
+            _context.LocalStore.TryUpsertEntities(_table, newMetadata, entities);
+
+            _context.LocalStore.SaveMetadata(_table, newMetadata);
 
             return true;
         }

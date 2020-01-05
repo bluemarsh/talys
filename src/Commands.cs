@@ -7,6 +7,7 @@ using System.Linq;
 using CommandLine;
 using Talys.Stores;
 using Newtonsoft.Json;
+using CommandLine.Text;
 
 namespace Talys
 {
@@ -192,7 +193,7 @@ namespace Talys
         }
     }
 
-    [Verb("compress",HelpText = "Compresses a currently-uncompressed local store.")]
+    [Verb("compress", HelpText = "Compresses a currently-uncompressed local store.")]
     internal sealed class CompressCommand : LocalStoreCommand
     {
         public override int Execute()
@@ -207,7 +208,7 @@ namespace Talys
         }
     }
 
-    [Verb("decompress",HelpText = "Decompresses a currently-compressed local store.")]
+    [Verb("decompress", HelpText = "Decompresses a currently-compressed local store.")]
     internal sealed class DecompressCommand : LocalStoreCommand
     {
         public override int Execute()
@@ -218,6 +219,54 @@ namespace Talys
             Console.WriteLine($"Decompressing {Tables} in {flowContext.LocalStore.Location}");
 
             var flow = new CompressFlow(flowContext, CompressionMode.Decompress);
+            return flow.TryExecute() ? 0 : 1;
+        }
+    }
+
+    [Verb("partition", HelpText = "Partitions a table into multiple subtables.")]
+    internal sealed class PartitionCommand : LocalStoreCommand
+    {
+        [Value(0, HelpText = "The table to partition.", Required = true)]
+        public string Table { get; set; } = string.Empty;
+
+        // TODO: don't inherit all the other configuration (e.g. compression) and specify 'c' here as shortName
+        [Option("columns", HelpText = "Specifies column partitioning as part1:column1,column2;part2:column1,column2;...")]
+        public string Columns { get; set; } = string.Empty;
+
+        public override int Execute()
+        {
+            if (!TryParseCommonArgs(Store, out var flowContext))
+                return 1;
+
+            if (!flowContext.Config.Tables.ContainsKey(Table))
+            {
+                Console.WriteLine($"Invalid table '{Table}' specified");
+                return 1;
+            }
+
+            var partitions = Columns.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            if (partitions.Length < 1)
+            {
+                Console.WriteLine("Must specify at least one partition");
+                return 1;
+            }
+
+            var partitionDefs = new Dictionary<string, IReadOnlyList<string>>();
+            foreach (var partition in partitions)
+            {
+                var pair = partition.Split(':', 2);
+                var name = pair[0];
+                var columnList = pair.Length == 2 ? pair[1] : name;
+                var columns = columnList.Split(',');
+                partitionDefs.Add(name, columns);
+            }
+
+            Console.WriteLine($"Partitioning {Table} into");
+            foreach (var (partition, columns) in partitionDefs)
+                Console.WriteLine($"  partition {Table}.{partition} with columns {string.Join(", ", columns)}");
+            Console.WriteLine($"  and remaining columns in {Table}");
+
+            var flow = new PartitionFlow(flowContext, Table, partitionDefs);
             return flow.TryExecute() ? 0 : 1;
         }
     }
