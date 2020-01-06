@@ -27,7 +27,7 @@ namespace Talys.Stores
             DateTime? lastTimestamp,
             long? lastId)
         {
-            const int limit = 50;
+            const int limit = 500;
 
             SetApiKeyIfNeeded(config);
 
@@ -78,7 +78,7 @@ namespace Talys.Stores
                 {
                     // TODO: figure out how to avoid duplicating code from above
 
-                    offset += 99;
+                    offset += 499;
                     //offset += 98; // 99 offset was acting like 100 when hit this for "people" table...
 
                     uri = BuildListUri(table);
